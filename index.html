@@ -501,13 +501,18 @@ function railPoint(s, off = 0) {
   return new THREE.Vector3(f.x + f.nx * off, 0, f.z + f.nz * off);
 }
 
-// stitch OSM way fragments into one continuous polyline through the crossing
-function stitchWays(ways) {
+// stitch OSM way fragments into one continuous polyline through the crossing.
+// Joins must continue smoothly (≤ maxTurnDeg) so the chain can't jump onto a
+// parallel carriageway, service road, siding or crossover.
+function stitchWays(ways, maxTurnDeg = 32) {
   if (!ways.length) return null;
-  const polys = ways.map(w => w.geometry.map(g => {
-    const l = lonLatToLocal(g.lon, g.lat);
-    return geoToModel(l.x, l.z);
-  }));
+  const polys = ways
+    .map(w => w.geometry.map(g => {
+      const l = lonLatToLocal(g.lon, g.lat);
+      return geoToModel(l.x, l.z);
+    }))
+    .filter(p => p.length > 1);
+  if (!polys.length) return null;
   let bi = 0, bd = Infinity;
   polys.forEach((p, i) => {
     for (const q of p) { const d = Math.hypot(q.x, q.z); if (d < bd) { bd = d; bi = i; } }
@@ -515,19 +520,49 @@ function stitchWays(ways) {
   const used = new Set([bi]);
   let chain = polys[bi].slice();
   const close = (a, b) => Math.hypot(a.x - b.x, a.z - b.z) < 0.8;
+  const dir = (a, b) => {
+    const L = Math.hypot(b.x - a.x, b.z - a.z) || 1;
+    return { x: (b.x - a.x) / L, z: (b.z - a.z) / L };
+  };
+  const cMin = Math.cos(maxTurnDeg * DEG);
+  const ok = (d1, d2) => d1.x * d2.x + d1.z * d2.z > cMin;
   let extended = true;
   while (extended) {
     extended = false;
+    const tailDir = dir(chain[chain.length - 2], chain[chain.length - 1]);
+    const headDir = dir(chain[0], chain[1]);
     for (let i = 0; i < polys.length; i++) {
       if (used.has(i)) continue;
-      const p = polys[i];
-      if (close(chain[chain.length - 1], p[0])) { chain = chain.concat(p.slice(1)); used.add(i); extended = true; }
-      else if (close(chain[chain.length - 1], p[p.length - 1])) { chain = chain.concat(p.slice(0, -1).reverse()); used.add(i); extended = true; }
-      else if (close(chain[0], p[p.length - 1])) { chain = p.slice(0, -1).concat(chain); used.add(i); extended = true; }
-      else if (close(chain[0], p[0])) { chain = p.slice(1).reverse().concat(chain); used.add(i); extended = true; }
+      const p = polys[i], L = p.length;
+      if (close(chain[chain.length - 1], p[0]) && ok(tailDir, dir(p[0], p[1]))) {
+        chain = chain.concat(p.slice(1)); used.add(i); extended = true; break;
+      }
+      if (close(chain[chain.length - 1], p[L - 1]) && ok(tailDir, dir(p[L - 1], p[L - 2]))) {
+        chain = chain.concat(p.slice(0, -1).reverse()); used.add(i); extended = true; break;
+      }
+      if (close(chain[0], p[L - 1]) && ok(dir(p[L - 2], p[L - 1]), headDir)) {
+        chain = p.slice(0, -1).concat(chain); used.add(i); extended = true; break;
+      }
+      if (close(chain[0], p[0]) && ok(dir(p[1], p[0]), headDir)) {
+        chain = p.slice(1).reverse().concat(chain); used.add(i); extended = true; break;
+      }
     }
   }
   return chain.length > 1 ? chain : null;
+}
+
+// a stitched path is only trusted if it passes through the crossing and stays
+// plausibly aligned with the expected direction near the works
+function pathSane(path, dirX, dirZ, range, maxDevDeg = 35) {
+  const f0 = path.frame(0);
+  if (Math.hypot(f0.x, f0.z) > 10) return false;
+  const cMin = Math.cos(maxDevDeg * DEG);
+  for (let s = -range; s <= range; s += 20) {
+    const f = path.frame(s);
+    const d = Math.abs(f.tx * dirX + f.tz * dirZ);
+    if (d < cMin) return false;
+  }
+  return true;
 }
 
 /* ---------------- satellite imagery ---------------- */
@@ -709,16 +744,36 @@ way["railway"="rail"](around.x:900)->.rw;
       setRailBearing(mb);
     }
 
-    // build the real curved centrelines
-    const roadChain = stitchWays(roadWays);
-    if (roadChain) roadPath = orientPath(makePath(roadChain), 1, 0);
+    // build the real curved centrelines — only adopted if they pass sanity
+    // checks, otherwise the straight rotated alignment is kept (previous behaviour)
+    let roadCurved = false, railCurved = false;
+
+    // restrict the road chain to ways sharing the name of the way at the crossing
+    let nearW = null, nwd = Infinity;
+    for (const w of roadWays) for (const g of w.geometry) {
+      const dd = Math.hypot(g.lat - nx.lat, g.lon - nx.lon);
+      if (dd < nwd) { nwd = dd; nearW = w; }
+    }
+    const roadName = nearW && nearW.tags && nearW.tags.name;
+    const mainRoadWays = roadName ? roadWays.filter(w => (w.tags.name || '') === roadName) : roadWays;
+
+    const roadChain = stitchWays(mainRoadWays);
+    if (roadChain) {
+      const p = orientPath(makePath(roadChain), 1, 0);
+      if (pathSane(p, 1, 0, 280)) { roadPath = p; roadCurved = true; }
+    }
     const railChain = stitchWays(railWays);
-    if (railChain) { railPath = orientPath(makePath(railChain), railDir.x, railDir.z); railAligned = true; }
+    if (railChain) {
+      const p = orientPath(makePath(railChain), railDir.x, railDir.z);
+      if (pathSane(p, railDir.x, railDir.z, 550)) { railPath = p; railAligned = railCurved = true; }
+    }
 
     buildRail();
     buildBridge();
     buildCars();
-    siteStatus = `OSM-aligned: crossing pinned, road + rail follow mapped centrelines (imagery rotated ${rotDeg.toFixed(1)}°, rail skew ${(railB / DEG).toFixed(1)}°)`;
+    siteStatus = `OSM crossing pinned, imagery rotated ${rotDeg.toFixed(1)}°, rail skew ${(railB / DEG).toFixed(1)}° · ` +
+      `road ${roadCurved ? 'follows mapped centreline' : 'straight (centreline rejected)'}; ` +
+      `rail ${railCurved ? 'follows mapped centreline' : 'straight (centreline rejected)'}`;
   } catch (e) {
     siteStatus = 'approximate (offline) — straight alignments; fine-tune with the imagery shift sliders';
   }
