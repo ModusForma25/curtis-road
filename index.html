@@ -154,7 +154,7 @@
   <button data-view="path">⬡ Shared-use path</button>
 </div>
 
-<div id="attrib">Imagery © Esri, Maxar, Earthstar Geographics • Buildings © OpenStreetMap contributors • Concept per DIT SA Curtis Road LXR project</div>
+<div id="attrib">Imagery © Esri, Maxar, Earthstar Geographics • Buildings &amp; alignments © OpenStreetMap contributors • Concept per DIT SA Curtis Road LXR project</div>
 
 <script type="importmap">
 { "imports": {
@@ -170,30 +170,32 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 /* ================================================================
    Curtis Road Level Crossing Removal — interactive concept model
    ----------------------------------------------------------------
-   Coordinate system: 1 unit = 1 metre. +X = east, −Z = north, +Y = up.
-   Origin = the Curtis Road / Gawler line crossing point, Munno Para SA.
-   The site centre and rail bearing below are approximate and can be
-   fine-tuned with the "Imagery shift" sliders in the panel.
+   Coordinate system: 1 unit = 1 metre. +X = east-ish, −Z = north-ish,
+   +Y = up. Origin = the Curtis Road / Gawler line crossing point.
+
+   The model is ALIGNMENT-DRIVEN: on load it queries OSM for the actual
+   level-crossing node, the Curtis Road centreline and the rail
+   centreline, and every road/rail element (deck chords, ramps, screens,
+   barriers, traffic, track) follows those real curved alignments.
+   Straight fallback alignments are used offline.
    ================================================================ */
 
 const CONFIG = {
-  // Curtis Rd × Gawler line crossing, between Munno Para (NE) and Smithfield (S).
-  // Fallback estimate only — on load the model queries OSM for the actual
-  // railway=level_crossing node on Curtis Road and snaps imagery + rail to it.
+  // fallback estimate of the crossing — replaced by the OSM node on load
   center: { lat: -34.6753, lon: 138.6877 },
-  railBearingDeg: 12,                        // fallback Gawler line bearing (° east of north)
+  railBearingDeg: 12,           // fallback rail bearing (° east of north)
   tileZoom: 18,
-  tileGrid: 11,                              // 11×11 tiles ≈ 1.4 km square at z18
+  tileGrid: 11,                 // 11×11 tiles ≈ 1.4 km square at z18
   groundExtent: 1000,
   roadHalfLength: 470,
 };
 
 const params = {
-  structure: 'super-t',          // 'super-t' | 'steel' | 'arch'
+  structure: 'super-t',         // 'super-t' | 'steel' | 'arch'
   spanCount: 3,
   spanLengths: [30, 36, 30],
   lanesPerDir: 1,
-  clearance: 6.8,                // ground (rail level) to deck soffit — 25 kV OHW corridor
+  clearance: 6.8,
   approach: 'retaining',
   throwScreens: true,
   screenExtent: 'full',
@@ -244,11 +246,11 @@ sun.shadow.camera.far = 1400;
 sun.shadow.bias = -0.0004;
 scene.add(sun);
 
-/* ---------------- shared geometry helpers ---------------- */
+/* ---------------- shared helpers ---------------- */
 
 const DEG = Math.PI / 180;
 let railB = CONFIG.railBearingDeg * DEG;
-const railDir = new THREE.Vector3(Math.sin(railB), 0, -Math.cos(railB)); // toward Gawler (NNE)
+const railDir = new THREE.Vector3(Math.sin(railB), 0, -Math.cos(railB));
 function setRailBearing(deg) {
   railB = deg * DEG;
   railDir.set(Math.sin(railB), 0, -Math.cos(railB));
@@ -271,7 +273,6 @@ const asphaltTex = makeCanvasTex((g, w, h) => {
     g.fillStyle = `rgba(${120 + Math.random() * 60},${120 + Math.random() * 60},${120 + Math.random() * 60},0.06)`;
     g.fillRect(Math.random() * w, Math.random() * h, 2, 2);
   }
-  // centre dashes drawn along Y of the texture (maps to road length)
   g.fillStyle = '#e8e8e8';
   for (let y = 8; y < h; y += 64) g.fillRect(w / 2 - 2, y, 4, 28);
   g.fillStyle = '#dadada'; g.fillRect(6, 0, 3, h); g.fillRect(w - 9, 0, 3, h);
@@ -288,7 +289,7 @@ const pathTex = makeCanvasTex((g, w, h) => {
 const msePanelTex = makeCanvasTex((g, w, h) => {
   g.fillStyle = '#b9b4aa'; g.fillRect(0, 0, w, h);
   g.strokeStyle = 'rgba(70,65,58,0.55)'; g.lineWidth = 3;
-  const s = 64;                                  // cruciform MSE panel pattern
+  const s = 64;
   for (let y = 0; y <= h; y += s) for (let x = -s; x <= w; x += s) {
     g.strokeRect(x + ((y / s) % 2) * s / 2, y, s, s);
   }
@@ -296,7 +297,6 @@ const msePanelTex = makeCanvasTex((g, w, h) => {
 
 // perforated corten/copper mesh with the white serpentine wave motif of the concept renders
 const cortenTex = makeCanvasTex((g, w, h) => {
-  // canvas starts transparent — draw the metal as dots so the holes see through
   const rust = ['#9a4f2e', '#b05c33', '#c06a3d', '#a85531'];
   for (let y = 3; y < h; y += 5) for (let x = 3 + (y % 10 < 5 ? 0 : 2.5); x < w; x += 5) {
     g.fillStyle = rust[(x * 7 + y * 13) % rust.length | 0];
@@ -314,7 +314,7 @@ const cortenTex = makeCanvasTex((g, w, h) => {
   }
   g.stroke();
   g.globalAlpha = 1;
-  g.fillStyle = '#2e3940';                       // top & bottom edge rails
+  g.fillStyle = '#2e3940';
   g.fillRect(0, 0, w, 5); g.fillRect(0, h - 5, w, 5);
 }, 1024, 256, 1, 1);
 
@@ -348,8 +348,9 @@ const MAT = {
   rail:      new THREE.MeshStandardMaterial({ color: 0x7a7d80, roughness: 0.35, metalness: 0.8 }),
   sleeper:   new THREE.MeshStandardMaterial({ color: 0x5a5650, roughness: 0.95 }),
   ballast:   new THREE.MeshStandardMaterial({ color: 0x6e6a64, roughness: 1 }),
+  ballastDk: new THREE.MeshStandardMaterial({ color: 0x57534d, roughness: 1 }),
   mast:      new THREE.MeshStandardMaterial({ color: 0x3a3f44, roughness: 0.6, metalness: 0.5 }),
-  building:  new THREE.MeshStandardMaterial({ color: 0xe9e1d2, roughness: 0.95, transparent: true, opacity: params.bldgOpacity }),
+  building:  new THREE.MeshStandardMaterial({ color: 0xe9e1d2, roughness: 0.95, transparent: true, opacity: 0.92 }),
   buildingEdge: new THREE.LineBasicMaterial({ color: 0x8d8474 }),
   embankment:new THREE.MeshStandardMaterial({ color: 0x8a9a66, roughness: 1, side: THREE.DoubleSide }),
   mse:       new THREE.MeshStandardMaterial({ map: msePanelTex, roughness: 0.9, side: THREE.DoubleSide }),
@@ -358,22 +359,178 @@ const MAT = {
   platform:  new THREE.MeshStandardMaterial({ color: 0xb8b2a6, roughness: 0.9 }),
 };
 
-/* ---------------- georeferenced ground: satellite tiles ---------------- */
+/* ---------------- georeferencing ---------------- */
 
-const geoGroup = new THREE.Group();   // satellite + buildings (shift together)
+const geoGroup = new THREE.Group();   // satellite + buildings (auto-aligned together)
 scene.add(geoGroup);
 
 const R_EARTH = 6378137;
-const m2 = lat => Math.cos(lat * DEG);                 // mercator → ground metres
 function lonLatToMerc(lon, lat) {
   return { x: R_EARTH * lon * DEG, y: R_EARTH * Math.log(Math.tan(Math.PI / 4 + lat * DEG / 2)) };
 }
 const centerMerc = lonLatToMerc(CONFIG.center.lon, CONFIG.center.lat);
-const groundScale = m2(CONFIG.center.lat);
+const groundScale = Math.cos(CONFIG.center.lat * DEG);
 function lonLatToLocal(lon, lat) {
   const m = lonLatToMerc(lon, lat);
   return { x: (m.x - centerMerc.x) * groundScale, z: -(m.y - centerMerc.y) * groundScale };
 }
+
+let geoRot = 0;                       // rotation so the real Curtis Rd lies along model +X at the crossing
+const geoCross = { x: 0, z: 0 };      // crossing point in geo-local coords
+const site = { lat: CONFIG.center.lat, lon: CONFIG.center.lon };
+let siteStatus = 'aligning to OSM level-crossing node…';
+let buildingsSource = 'loading…';
+
+function applyGeoOffset() {
+  geoGroup.rotation.y = geoRot;
+  const c = Math.cos(geoRot), s = Math.sin(geoRot);
+  const rx = geoCross.x * c + geoCross.z * s, rz = -geoCross.x * s + geoCross.z * c;
+  geoGroup.position.set(-rx + params.geoX, 0, -rz + params.geoZ);
+}
+
+function geoToWorld(x, z) {
+  const c = Math.cos(geoRot), s = Math.sin(geoRot);
+  return { x: x * c + z * s + geoGroup.position.x, z: -x * s + z * c + geoGroup.position.z };
+}
+
+// model frame = auto alignment only (manual imagery-trim sliders excluded)
+function geoToModel(x, z) {
+  const c = Math.cos(geoRot), s = Math.sin(geoRot);
+  return { x: (x - geoCross.x) * c + (z - geoCross.z) * s,
+           z: -(x - geoCross.x) * s + (z - geoCross.z) * c };
+}
+
+/* ---------------- centreline paths (the heart of the model) ---------------- */
+
+function makePath(raw) {
+  // raw: ordered [{x,z}] in model coords. Resampled; arc-length parameterised
+  // with s = 0 at the point closest to the origin (the crossing).
+  const cumR = [0];
+  for (let i = 1; i < raw.length; i++) {
+    cumR.push(cumR[i - 1] + Math.hypot(raw[i].x - raw[i - 1].x, raw[i].z - raw[i - 1].z));
+  }
+  const total = cumR[cumR.length - 1];
+  const N = Math.max(2, Math.ceil(total / 6));
+  const ds = total / N;
+  const pts = [];
+  let j = 0;
+  for (let k = 0; k <= N; k++) {
+    const sd = k * ds;
+    while (j < raw.length - 2 && cumR[j + 1] < sd) j++;
+    const t = (sd - cumR[j]) / Math.max(1e-6, cumR[j + 1] - cumR[j]);
+    pts.push({ x: raw[j].x + (raw[j + 1].x - raw[j].x) * t,
+               z: raw[j].z + (raw[j + 1].z - raw[j].z) * t });
+  }
+
+  let s0 = 0;
+  function computeS0() {
+    let bi = 0, bd = Infinity;
+    pts.forEach((p, i) => { const d = p.x * p.x + p.z * p.z; if (d < bd) { bd = d; bi = i; } });
+    s0 = bi * ds;
+    // refine by projecting the origin onto the adjacent segments
+    for (const i of [bi - 1, bi]) {
+      if (i < 0 || i + 1 >= pts.length) continue;
+      const a = pts[i], b = pts[i + 1];
+      const dx = b.x - a.x, dz = b.z - a.z, L2 = dx * dx + dz * dz;
+      if (L2 < 1e-6) continue;
+      const t = Math.max(0, Math.min(1, (-a.x * dx - a.z * dz) / L2));
+      const px = a.x + dx * t, pz = a.z + dz * t;
+      if (px * px + pz * pz < bd) { bd = px * px + pz * pz; s0 = (i + t) * ds; }
+    }
+  }
+  computeS0();
+
+  const path = {
+    pts, total,
+    get sMin() { return -s0; },
+    get sMax() { return total - s0; },
+    _fr(sl) {
+      const i = Math.min(pts.length - 2, Math.max(0, Math.floor(sl / ds)));
+      const t = (sl - i * ds) / ds;
+      const a = pts[i], b = pts[i + 1];
+      const i0 = Math.max(0, i - 1), i1 = Math.min(pts.length - 1, i + 2);
+      let tx = pts[i1].x - pts[i0].x, tz = pts[i1].z - pts[i0].z;
+      const L = Math.hypot(tx, tz) || 1; tx /= L; tz /= L;
+      return { x: a.x + (b.x - a.x) * t, z: a.z + (b.z - a.z) * t, tx, tz, nx: -tz, nz: tx };
+    },
+    frame(s) {
+      const sl = s + s0;
+      if (sl <= 0) {
+        const f = this._fr(0);
+        return { x: f.x + f.tx * sl, z: f.z + f.tz * sl, tx: f.tx, tz: f.tz, nx: f.nx, nz: f.nz };
+      }
+      if (sl >= total) {
+        const f = this._fr(total - 1e-6), d = sl - total;
+        return { x: f.x + f.tx * d, z: f.z + f.tz * d, tx: f.tx, tz: f.tz, nx: f.nx, nz: f.nz };
+      }
+      return this._fr(sl);
+    },
+    nearest(x, z) {
+      let m = Infinity, bi = 0;
+      for (let i = 0; i < pts.length; i++) {
+        const d = Math.hypot(pts[i].x - x, pts[i].z - z);
+        if (d < m) { m = d; bi = i; }
+      }
+      const f = this._fr(Math.min(total - 1e-6, bi * ds));
+      return { dist: m, tx: f.tx, tz: f.tz, s: bi * ds - s0 };
+    },
+    reverse() { pts.reverse(); s0 = total - s0; },
+  };
+  return path;
+}
+
+function orientPath(path, dx, dz) {
+  const f = path.frame(0);
+  if (f.tx * dx + f.tz * dz < 0) path.reverse();
+  return path;
+}
+
+function straightRailPath() {
+  return makePath([{ x: -railDir.x * 700, z: -railDir.z * 700 },
+                   { x: railDir.x * 700, z: railDir.z * 700 }]);
+}
+
+let roadPath = makePath([{ x: -1200, z: 0 }, { x: 1200, z: 0 }]);
+let railPath = straightRailPath();
+let railAligned = false;              // true once railPath comes from OSM geometry
+
+const roadFrame = s => roadPath.frame(s);
+const railFrame = s => railPath.frame(s);
+function railPoint(s, off = 0) {
+  const f = railFrame(s);
+  return new THREE.Vector3(f.x + f.nx * off, 0, f.z + f.nz * off);
+}
+
+// stitch OSM way fragments into one continuous polyline through the crossing
+function stitchWays(ways) {
+  if (!ways.length) return null;
+  const polys = ways.map(w => w.geometry.map(g => {
+    const l = lonLatToLocal(g.lon, g.lat);
+    return geoToModel(l.x, l.z);
+  }));
+  let bi = 0, bd = Infinity;
+  polys.forEach((p, i) => {
+    for (const q of p) { const d = Math.hypot(q.x, q.z); if (d < bd) { bd = d; bi = i; } }
+  });
+  const used = new Set([bi]);
+  let chain = polys[bi].slice();
+  const close = (a, b) => Math.hypot(a.x - b.x, a.z - b.z) < 0.8;
+  let extended = true;
+  while (extended) {
+    extended = false;
+    for (let i = 0; i < polys.length; i++) {
+      if (used.has(i)) continue;
+      const p = polys[i];
+      if (close(chain[chain.length - 1], p[0])) { chain = chain.concat(p.slice(1)); used.add(i); extended = true; }
+      else if (close(chain[chain.length - 1], p[p.length - 1])) { chain = chain.concat(p.slice(0, -1).reverse()); used.add(i); extended = true; }
+      else if (close(chain[0], p[p.length - 1])) { chain = p.slice(0, -1).concat(chain); used.add(i); extended = true; }
+      else if (close(chain[0], p[0])) { chain = p.slice(1).reverse().concat(chain); used.add(i); extended = true; }
+    }
+  }
+  return chain.length > 1 ? chain : null;
+}
+
+/* ---------------- satellite imagery ---------------- */
 
 function tileURL(z, x, y) {
   if (params.imgSource === 'custom' && params.customUrl)
@@ -393,15 +550,13 @@ function buildSatellite(atLat, atLon) {
   const latR = atLat * DEG;
   const cy = Math.floor((1 - Math.log(Math.tan(latR) + 1 / Math.cos(latR)) / Math.PI) / 2 * n);
   const world = 2 * Math.PI * R_EARTH;
-  const tileMerc = world / n;
-  const size = tileMerc * groundScale;
+  const size = (world / n) * groundScale;
   const half = (CONFIG.tileGrid - 1) / 2;
   const loader = new THREE.TextureLoader();
   loader.setCrossOrigin('anonymous');
 
   for (let dx = -half; dx <= half; dx++) for (let dy = -half; dy <= half; dy++) {
     const tx = cx + dx, ty = cy + dy;
-    // mercator coords of tile centre
     const mx = (tx + 0.5) / n * world - world / 2;
     const my = world / 2 - (ty + 0.5) / n * world;
     const px = (mx - centerMerc.x) * groundScale;
@@ -418,12 +573,11 @@ function buildSatellite(atLat, atLon) {
     loader.load(
       tileURL(z, tx, ty),
       tex => { tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8; mat.map = tex; mat.color.set(0xffffff); mat.needsUpdate = true; },
-      undefined, () => {} // keep flat-colour fallback on error
+      undefined, () => {}
     );
   }
 }
 
-// neutral apron under/past the tiles
 {
   const apron = new THREE.Mesh(
     new THREE.CircleGeometry(CONFIG.groundExtent * 2.4, 48),
@@ -434,38 +588,20 @@ function buildSatellite(atLat, atLon) {
   scene.add(apron);
 }
 
-/* ---------------- building envelopes (OSM, procedural fallback) ---------------- */
+/* ---------------- building envelopes ---------------- */
 
 const buildingGroup = new THREE.Group();
 geoGroup.add(buildingGroup);
-let buildingsSource = 'loading…';
-let siteStatus = 'aligning to OSM level-crossing node…';
-let geoRot = 0;                       // rotation so the real Curtis Rd lies along model +X
-const geoCross = { x: 0, z: 0 };      // crossing point in geo-local coords
-const site = { lat: CONFIG.center.lat, lon: CONFIG.center.lon };
-
-function geoToWorld(x, z) {
-  const c = Math.cos(geoRot), s = Math.sin(geoRot);
-  return { x: x * c + z * s + geoGroup.position.x, z: -x * s + z * c + geoGroup.position.z };
-}
-
-function applyGeoOffset() {
-  geoGroup.rotation.y = geoRot;
-  const c = Math.cos(geoRot), s = Math.sin(geoRot);
-  const rx = geoCross.x * c + geoCross.z * s, rz = -geoCross.x * s + geoCross.z * c;
-  geoGroup.position.set(-rx + params.geoX, 0, -rz + params.geoZ);
-}
 
 function clearCorridor(x, z) {
-  // keep envelopes off the works: Curtis Rd corridor + rail corridor
-  if (Math.abs(z) < 26 && Math.abs(x) < CONFIG.roadHalfLength) return false;
-  const alongPerp = Math.abs(x * Math.cos(railB) + z * Math.sin(railB));
-  if (alongPerp < 18) return false;
+  const nr = roadPath.nearest(x, z);
+  if (nr.dist < 26 && Math.abs(nr.s) < derived.roadEnd) return false;
+  if (railPath.nearest(x, z).dist < 18) return false;
   return true;
 }
 
 function addEnvelope(shapePts, height) {
-  const shape = new THREE.Shape(shapePts.map(p => new THREE.Vector2(p.x, -p.z))); // y-up extrude plane: (east, north)
+  const shape = new THREE.Shape(shapePts.map(p => new THREE.Vector2(p.x, -p.z)));
   const geo = new THREE.ExtrudeGeometry(shape, { depth: height, bevelEnabled: false });
   geo.rotateX(-Math.PI / 2);
   const mesh = new THREE.Mesh(geo, MAT.building);
@@ -499,7 +635,6 @@ async function loadBuildings(atLat, atLon) {
       const pts = el.geometry.map(g => lonLatToLocal(g.lon, g.lat));
       const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
       const cz = pts.reduce((s, p) => s + p.z, 0) / pts.length;
-      // test in world coords (geoGroup carries the auto-alignment shift + rotation)
       const w = geoToWorld(cx, cz);
       if (!clearCorridor(w.x, w.z)) continue;
       const levels = parseFloat(el.tags && el.tags['building:levels']) || 1;
@@ -514,12 +649,12 @@ async function loadBuildings(atLat, atLon) {
   }
 }
 
-/* ---- georeference the model to the real crossing via OSM ---- */
+/* ---------------- georeference + alignment fetch ---------------- */
 
 function rawBearing(a, b) {
   const dLat = b.lat - a.lat;
   const dLon = (b.lon - a.lon) * Math.cos((a.lat + b.lat) / 2 * DEG);
-  return Math.atan2(dLon, dLat) / DEG;             // 0 = due north, +ve toward east
+  return Math.atan2(dLon, dLat) / DEG;
 }
 
 function nearestSegBearing(ways, to) {
@@ -537,7 +672,7 @@ async function alignSite() {
   const q = `[out:json][timeout:25];
 way["highway"]["name"~"Curtis"](around:2500,${lat},${lon})->.cr;
 node(w.cr)["railway"="level_crossing"]->.x;
-way["railway"="rail"](around.x:150)->.rw;
+way["railway"="rail"](around.x:900)->.rw;
 .x out;
 .rw out geom;
 .cr out geom;`;
@@ -550,133 +685,187 @@ way["railway"="rail"](around.x:150)->.rw;
     const railWays = ways.filter(w => w.tags && w.tags.railway);
     const roadWays = ways.filter(w => w.tags && w.tags.highway);
     if (!nodes.length) throw new Error('crossing not found');
-    // nearest crossing node to our estimate
     nodes.sort((a, b) => (Math.hypot(a.lat - lat, a.lon - lon)) - (Math.hypot(b.lat - lat, b.lon - lon)));
     const nx = nodes[0];
     site.lat = nx.lat; site.lon = nx.lon;
     const d = lonLatToLocal(nx.lon, nx.lat);
     geoCross.x = d.x; geoCross.z = d.z;
-    // rotate the georeferenced ground so the real Curtis Rd alignment lies along model +X
+
+    // rotate the world so the real Curtis Rd lies along model +X at the crossing
     let rotDeg = 0;
     let roadB = nearestSegBearing(roadWays, nx);
     if (roadB !== null) {
-      roadB = ((roadB % 360) + 360) % 180;         // fold to [0,180): an E–W road ≈ 90
+      roadB = ((roadB % 360) + 360) % 180;
       rotDeg = roadB - 90;
       geoRot = rotDeg * DEG;
     }
     applyGeoOffset();
-    // rail skew expressed in the rotated model frame
+
+    // rail skew at the crossing, in the rotated model frame
     const railRaw = nearestSegBearing(railWays, nx);
     if (railRaw !== null) {
       let mb = ((railRaw - rotDeg) % 360 + 360) % 180;
       if (mb > 90) mb -= 180;
       setRailBearing(mb);
     }
+
+    // build the real curved centrelines
+    const roadChain = stitchWays(roadWays);
+    if (roadChain) roadPath = orientPath(makePath(roadChain), 1, 0);
+    const railChain = stitchWays(railWays);
+    if (railChain) { railPath = orientPath(makePath(railChain), railDir.x, railDir.z); railAligned = true; }
+
     buildRail();
     buildBridge();
-    siteStatus = `OSM crossing pinned; imagery rotated ${rotDeg.toFixed(1)}°, rail skew ${(railB / DEG).toFixed(1)}° to road normal`;
+    buildCars();
+    siteStatus = `OSM-aligned: crossing pinned, road + rail follow mapped centrelines (imagery rotated ${rotDeg.toFixed(1)}°, rail skew ${(railB / DEG).toFixed(1)}°)`;
   } catch (e) {
-    siteStatus = 'approximate — fine-tune with the imagery shift sliders';
+    siteStatus = 'approximate (offline) — straight alignments; fine-tune with the imagery shift sliders';
   }
   updateStats();
   buildSatellite(site.lat, site.lon);
   loadBuildings(site.lat, site.lon);
 }
-alignSite();
 
-/* ---------------- rail corridor (Gawler line, electrified, 2 tracks) ---------------- */
+/* ---------------- generic ribbon along a path ---------------- */
+
+function pathRibbon(path, sA, sB, width, offset, yFn, material, step = 4) {
+  const pos = [], uvA = [], idx = [];
+  let i = 0;
+  for (let s = sA; s <= sB + 0.01; s += step) {
+    const f = path.frame(s);
+    const y = yFn(s);
+    const cx = f.x + f.nx * offset, cz = f.z + f.nz * offset;
+    pos.push(cx - f.nx * width / 2, y, cz - f.nz * width / 2,
+             cx + f.nx * width / 2, y, cz + f.nz * width / 2);
+    uvA.push(0, s / 16, 1, s / 16);
+    if (i > 0) idx.push(2 * i - 2, 2 * i, 2 * i + 1, 2 * i - 2, 2 * i + 1, 2 * i - 1);
+    i++;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvA, 2));
+  geo.setIndex(idx);
+  geo.computeVertexNormals();
+  const mesh = new THREE.Mesh(geo, material);
+  mesh.receiveShadow = true;
+  return mesh;
+}
+
+function groundRoad(ptsModel, width) {
+  const p = makePath(ptsModel);
+  return pathRibbon(p, p.sMin, p.sMax, width, 0, () => 0.03, MAT.linkRoad, 6);
+}
+
+/* ---------------- rail corridor (curved, electrified, 2 tracks) ---------------- */
 
 const railGroup = new THREE.Group();
 scene.add(railGroup);
 
-function railPoint(s, offset = 0) {
-  // s metres along rail from crossing; offset metres to the east-ish perpendicular
-  const perp = new THREE.Vector3(railDir.z, 0, -railDir.x).negate(); // right of travel dir
-  return new THREE.Vector3().copy(railDir).multiplyScalar(s)
-    .addScaledVector(perp, offset);
-}
-
 function buildRail() {
   disposeGroup(railGroup);
-  const LEN = 1300, half = LEN / 2;
-  // ballast bed
-  const ballast = new THREE.Mesh(new THREE.BoxGeometry(11, 0.5, LEN), MAT.ballast);
-  ballast.position.y = 0.25;
-  const bg = new THREE.Group();
-  bg.add(ballast);
+  const S0 = -650, S1 = 650;
+
+  railGroup.add(pathRibbon(railPath, S0, S1, 13, 0, () => 0.18, MAT.ballastDk, 6));
+  railGroup.add(pathRibbon(railPath, S0, S1, 10.5, 0, () => 0.5, MAT.ballast, 6));
 
   const trackOffsets = [-2.4, 2.4];
-  // rails
-  for (const to of trackOffsets) for (const ro of [-0.75, 0.75]) {
-    const r = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.18, LEN), MAT.rail);
-    r.position.set(to + ro, 0.62, 0);
-    bg.add(r);
-  }
-  // sleepers (instanced)
-  const nS = Math.floor(LEN / 0.7);
-  const sleeper = new THREE.InstancedMesh(new THREE.BoxGeometry(2.4, 0.16, 0.24), MAT.sleeper, nS * 2);
-  const m4 = new THREE.Matrix4();
-  let k = 0;
-  for (const to of trackOffsets) for (let i = 0; i < nS; i++) {
-    m4.makeTranslation(to, 0.5, -half + i * 0.7);
-    sleeper.setMatrixAt(k++, m4);
-  }
-  bg.add(sleeper);
+  const segLen = 5;
+  const nSeg = Math.floor((S1 - S0) / segLen);
 
-  // 25 kV overhead wiring portal masts (line electrified 2022)
-  for (let s = -600; s <= 600; s += 55) {
-    if (Math.abs(s) < 12) continue;   // not inside the bridge envelope
-    for (const side of [-5.4, 5.4]) {
-      const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.18, 7.4, 8), MAT.mast);
-      mast.position.set(side, 3.7, s);
-      mast.castShadow = true;
-      bg.add(mast);
-      const cant = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.08, 0.08), MAT.mast);
-      cant.position.set(side - Math.sign(side) * 1.4, 6.6, s);
-      bg.add(cant);
+  // rails
+  const railInst = new THREE.InstancedMesh(new THREE.BoxGeometry(0.12, 0.18, segLen * 1.03), MAT.rail, nSeg * 4);
+  // sleepers
+  const slStep = 0.75;
+  const nSl = Math.floor((S1 - S0) / slStep);
+  const slInst = new THREE.InstancedMesh(new THREE.BoxGeometry(2.4, 0.16, 0.24), MAT.sleeper, nSl * 2);
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1), v = new THREE.Vector3();
+  let kR = 0, kS = 0;
+  for (let i = 0; i < nSeg; i++) {
+    const s = S0 + (i + 0.5) * segLen;
+    const f = railFrame(s);
+    q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(f.tx, f.tz));
+    for (const to of trackOffsets) for (const ro of [-0.75, 0.75]) {
+      v.set(f.x + f.nx * (to + ro), 0.62, f.z + f.nz * (to + ro));
+      m4.compose(v, q, one);
+      railInst.setMatrixAt(kR++, m4);
     }
   }
+  for (let i = 0; i < nSl; i++) {
+    const s = S0 + (i + 0.5) * slStep;
+    const f = railFrame(s);
+    q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(f.tx, f.tz));
+    for (const to of trackOffsets) {
+      v.set(f.x + f.nx * to, 0.5, f.z + f.nz * to);
+      m4.compose(v, q, one);
+      slInst.setMatrixAt(kS++, m4);
+    }
+  }
+  railGroup.add(railInst, slInst);
+
+  // 25 kV overhead wiring masts (line electrified 2022)
+  for (let s = -600; s <= 600; s += 55) {
+    if (Math.abs(s) < 12) continue;
+    const f = railFrame(s);
+    for (const side of [-5.4, 5.4]) {
+      const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.18, 7.4, 8), MAT.mast);
+      mast.position.set(f.x + f.nx * side, 3.7, f.z + f.nz * side);
+      mast.castShadow = true;
+      railGroup.add(mast);
+      const cant = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 2.6), MAT.mast);
+      cant.position.set(f.x + f.nx * (side - Math.sign(side) * 1.4), 6.6, f.z + f.nz * (side - Math.sign(side) * 1.4));
+      cant.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(f.nx, f.nz));
+      railGroup.add(cant);
+    }
+  }
+
   // catenary wires
   for (const to of trackOffsets) for (const wy of [5.05, 6.0]) {
-    const g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(to, wy, -half), new THREE.Vector3(to, wy, half)]);
-    bg.add(new THREE.Line(g, new THREE.LineBasicMaterial({ color: 0x222222 })));
+    const pts = [];
+    for (let s = S0; s <= S1; s += 10) {
+      const f = railFrame(s);
+      pts.push(new THREE.Vector3(f.x + f.nx * to, wy, f.z + f.nz * to));
+    }
+    railGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
+                                 new THREE.LineBasicMaterial({ color: 0x222222 })));
   }
 
   // Smithfield station — ~600 m south of the crossing (toward the city)
   for (const side of [-1, 1]) {
-    const plat = new THREE.Mesh(new THREE.BoxGeometry(3.4, 1.0, 115), MAT.platform);
-    plat.position.set(side * 5.6, 0.5, -620);
-    plat.castShadow = true; plat.receiveShadow = true;
-    bg.add(plat);
+    for (let ps = -675; ps < -565; ps += 37) {
+      const f = railFrame(ps + 18.5);
+      const plat = new THREE.Mesh(new THREE.BoxGeometry(3.4, 1.0, 38), MAT.platform);
+      plat.position.set(f.x + f.nx * side * 5.6, 0.5, f.z + f.nz * side * 5.6);
+      plat.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(f.tx, f.tz));
+      plat.castShadow = true; plat.receiveShadow = true;
+      railGroup.add(plat);
+    }
+    const fs = railFrame(-612);
     const shelter = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.18, 14), new THREE.MeshStandardMaterial({ color: 0xb8483c, roughness: 0.6 }));
-    shelter.position.set(side * 5.6, 3.4, -612);
+    shelter.position.set(fs.x + fs.nx * side * 5.6, 3.4, fs.z + fs.nz * side * 5.6);
+    shelter.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(fs.tx, fs.tz));
     shelter.castShadow = true;
-    bg.add(shelter);
+    railGroup.add(shelter);
     for (const ps of [-618, -606]) {
+      const fp = railFrame(ps);
       const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 2.4, 6), MAT.mast);
-      post.position.set(side * 5.6, 2.2, ps);
-      bg.add(post);
+      post.position.set(fp.x + fp.nx * side * 5.6, 2.2, fp.z + fp.nz * side * 5.6);
+      railGroup.add(post);
     }
   }
-
-  // group is built along its local Z axis — rotate it onto the rail bearing
-  const qy = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, -1), railDir);
-  bg.quaternion.copy(qy);
-  railGroup.add(bg);
 }
-buildRail();
 
 /* ---------------- the parametric overpass ---------------- */
 
 const bridgeGroup = new THREE.Group();
 scene.add(bridgeGroup);
 
-const derived = { deckTopY: 10, totalLen: 96, rampLen: 200, x0: -48, x1: 48, deckWidth: 16, roadWidth: 8, clash: false };
+const derived = { deckTopY: 10, totalLen: 96, rampLen: 200, x0: -48, x1: 48, deckWidth: 16, roadWidth: 8, clash: false, roadEnd: 470 };
 
 function structDepth(type, maxSpan) {
   if (type === 'super-t') return THREE.MathUtils.clamp(maxSpan / 17, 1.2, 2.6);
   if (type === 'steel')   return THREE.MathUtils.clamp(maxSpan / 21, 1.2, 2.8);
-  return 1.15; // network arch — shallow through-deck
+  return 1.15;
 }
 
 function computeDerived() {
@@ -685,28 +874,31 @@ function computeDerived() {
   const d = structDepth(params.structure, maxSpan);
   derived.totalLen = total;
   derived.x0 = -total / 2; derived.x1 = total / 2;
-  derived.deckTopY = params.clearance + d + 0.42;     // soffit + structure + slab/surfacing
-  derived.rampLen = derived.deckTopY / 0.05;          // 5 % grades
+  derived.deckTopY = params.clearance + d + 0.42;
+  derived.rampLen = derived.deckTopY / 0.05;
   derived.roadWidth = params.lanesPerDir * 2 * 3.5 + 1.0;
-  derived.deckWidth = derived.roadWidth + 2 * (0.45 + 3.0 + 0.4);  // barriers + SUPs + edges
+  derived.deckWidth = derived.roadWidth + 2 * (0.45 + 3.0 + 0.4);
   derived.structD = d;
   derived.roadEnd = Math.max(CONFIG.roadHalfLength, derived.x1 + derived.rampLen + 60);
 }
 
-function roadY(x) {
-  const a = Math.abs(x);
+function roadY(s) {
+  const a = Math.abs(s);
   if (a <= derived.x1) return derived.deckTopY;
   return derived.deckTopY * smooth(1 - (a - derived.x1) / derived.rampLen);
 }
 
 function disposeGroup(g) {
-  g.traverse(o => {
-    if (o.geometry) o.geometry.dispose();
-  });
+  g.traverse(o => { if (o.geometry) o.geometry.dispose(); });
   g.clear();
 }
 
-/* ---- girder builders (one span, local x from 0..len, y=0 at girder TOP) ---- */
+function elevatedExtent() {
+  const lim = derived.x1 + derived.rampLen * 0.97;
+  return [-lim, lim];
+}
+
+/* ---- girder builders (one straight chord span, local x: 0..len, y=0 at girder TOP) ---- */
 
 function superTSpan(len, width) {
   const g = new THREE.Group();
@@ -714,7 +906,7 @@ function superTSpan(len, width) {
   const shape = new THREE.Shape();
   shape.moveTo(-1.05, 0); shape.lineTo(1.05, 0); shape.lineTo(0.35, -d); shape.lineTo(-0.35, -d); shape.closePath();
   const geo = new THREE.ExtrudeGeometry(shape, { depth: len - 0.5, bevelEnabled: false });
-  geo.rotateY(Math.PI / 2); // extrusion now along +X... rotateY maps +Z→+X
+  geo.rotateY(Math.PI / 2);
   const n = Math.max(4, Math.round(width / 2.35));
   const spacing = (width - 1.4) / (n - 1);
   for (let i = 0; i < n; i++) {
@@ -742,7 +934,6 @@ function steelSpan(len, width) {
     bf.position.set(L / 2 + 0.25, -d + 0.04, z);
     web.castShadow = tf.castShadow = bf.castShadow = true;
     g.add(web, tf, bf);
-    // cross-frames
     if (i < n - 1) for (let xb = L / 4; xb < L; xb += L / 4) {
       const cf = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, spacing - 0.1), MAT.steel);
       cf.position.set(xb, -d / 2, z + spacing / 2);
@@ -753,7 +944,6 @@ function steelSpan(len, width) {
 }
 
 function archSpan(len, width, deckTopLocal) {
-  // through network arch: ribs rise above deck, ties at deck edge, crossing hangers
   const g = new THREE.Group();
   const rise = Math.max(7, len * 0.165);
   const halfW = width / 2 - 0.55;
@@ -768,12 +958,10 @@ function archSpan(len, width, deckTopLocal) {
     const rib = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 60, 0.42, 10), MAT.archSteel);
     rib.castShadow = true;
     g.add(rib);
-    // tie beam at deck level
     const tie = new THREE.Mesh(new THREE.BoxGeometry(len, 1.0, 0.7), MAT.archSteel);
     tie.position.set(len / 2, deckTopLocal - 0.5, side * halfW);
     tie.castShadow = true;
     g.add(tie);
-    // network hangers — two inclined families crossing each other
     const hangerPts = [];
     const nh = Math.max(6, Math.floor(len / 3.2));
     const dx = len * 0.055;
@@ -788,7 +976,6 @@ function archSpan(len, width, deckTopLocal) {
     const hg = new THREE.BufferGeometry().setFromPoints(hangerPts);
     g.add(new THREE.LineSegments(hg, new THREE.LineBasicMaterial({ color: 0x9aa3ab })));
   }
-  // top wind bracing
   for (let i = 1; i < 6; i++) {
     const t = i / 6;
     const brace = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, width - 1.1, 8), MAT.archSteel);
@@ -799,13 +986,9 @@ function archSpan(len, width, deckTopLocal) {
   return g;
 }
 
-/* ---- screens / barriers as instanced segments along the deck ---- */
+/* ---- throw screens per the concept renders ---- */
 
-/* throw screens per the concept renders: concrete parapet, kinked dark steel
-   blade posts, perforated corten mesh carrying the white wave motif, running
-   the full elevated length and following the road grade */
-
-const SCREEN_PROF = [        // blade profile above the parapet: {h: height, o: outward offset}
+const SCREEN_PROF = [
   { h: 0.0, o: 0.00 },
   { h: 2.0, o: 0.30 },       // lower leg leans outward
   { h: 3.0, o: -0.12 },      // top leg folds back in over the path
@@ -828,16 +1011,18 @@ function buildThrowScreens() {
   const n = Math.max(2, Math.round((s1 - s0) / step));
 
   for (const side of [-1, 1]) {
-    const zEdge = side * (W / 2 - 0.10);
+    const edgeOff = side * (W / 2 - 0.10);
 
-    /* continuous perforated-mesh ribbon (so the wave motif flows along the bridge) */
+    /* continuous perforated-mesh ribbon following the curved alignment */
     const pos = [], uv = [], idx = [];
     for (let i = 0; i <= n; i++) {
-      const x = s0 + (i / n) * (s1 - s0);
-      const yB = roadY(x) + PARAPET_H;
+      const s = s0 + (i / n) * (s1 - s0);
+      const f = roadFrame(s);
+      const yB = roadY(s) + PARAPET_H;
       for (let r = 0; r < SCREEN_PROF.length; r++) {
-        pos.push(x, yB + SCREEN_PROF[r].h, zEdge + side * SCREEN_PROF[r].o);
-        uv.push(x / 36, r === 0 ? 0 : r === 1 ? 0.68 : 1);
+        const off = edgeOff + side * SCREEN_PROF[r].o;
+        pos.push(f.x + f.nx * off, yB + SCREEN_PROF[r].h, f.z + f.nz * off);
+        uv.push(s / 36, r === 0 ? 0 : r === 1 ? 0.68 : 1);
       }
       if (i > 0) {
         const a = (i - 1) * 3, b = i * 3;
@@ -863,68 +1048,27 @@ function buildThrowScreens() {
     upGeo.translate(0, upLen / 2, 0);
     upGeo.rotateX(Math.atan2(side * upDz, upDy));
     upGeo.translate(0, lowDy, side * lowDz);
-    const m4 = new THREE.Matrix4();
+    const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1), v = new THREE.Vector3();
     for (const legGeo of [lowGeo, upGeo]) {
       const inst = new THREE.InstancedMesh(legGeo, MAT.screenFrame, nP);
       for (let i = 0; i < nP; i++) {
-        const x = Math.min(s0 + i * step, s1);
-        m4.makeTranslation(x, roadY(x) + PARAPET_H, zEdge);
+        const s = Math.min(s0 + i * step, s1);
+        const f = roadFrame(s);
+        q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(-f.tz, f.tx));
+        v.set(f.x + f.nx * edgeOff, roadY(s) + PARAPET_H, f.z + f.nz * edgeOff);
+        m4.compose(v, q, one);
         inst.setMatrixAt(i, m4);
       }
       inst.castShadow = true;
       g.add(inst);
     }
 
-    /* concrete parapet beneath the screen */
-    g.add(buildParapetRun(zEdge, s0, s1));
-  }
-  return g;
-}
-
-function buildParapetRun(zOff, s0, s1) {
-  const segLen = 4;
-  const n = Math.max(1, Math.ceil((s1 - s0) / segLen));
-  const s = new THREE.Shape();
-  s.moveTo(-0.20, 0); s.lineTo(0.20, 0); s.lineTo(0.15, PARAPET_H); s.lineTo(-0.15, PARAPET_H);
-  s.closePath();
-  const geo = new THREE.ExtrudeGeometry(s, { depth: segLen * 1.02, bevelEnabled: false });
-  geo.rotateY(Math.PI / 2);
-  const inst = new THREE.InstancedMesh(geo, MAT.barrier, n);
-  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion();
-  for (let i = 0; i < n; i++) {
-    const x = s0 + i * segLen;
-    q.setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.atan2(roadY(x + segLen) - roadY(x), segLen));
-    m4.compose(new THREE.Vector3(x, roadY(x) + 0.02, zOff), q, new THREE.Vector3(1, 1, 1));
-    inst.setMatrixAt(i, m4);
-  }
-  inst.castShadow = true;
-  return inst;
-}
-
-function buildStreetLights() {
-  const g = new THREE.Group();
-  const [e0, e1] = elevatedExtent();
-  const RW = derived.roadWidth;
-  const headMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, emissive: 0xfff7d0, emissiveIntensity: 0.5 });
-  let alt = 1;
-  for (let x = e0 + 12; x <= e1 - 8; x += 42) {
-    const side = alt; alt = -alt;
-    const y = roadY(x);
-    const zP = side * (RW / 2 + 0.75);
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.1, 9, 8), MAT.mast);
-    pole.position.set(x, y + 4.5, zP);
-    pole.castShadow = true;
-    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 2.4), MAT.mast);
-    arm.position.set(x, y + 8.9, zP - side * 1.2);
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.12, 0.8), headMat);
-    head.position.set(x, y + 8.82, zP - side * 2.2);
-    g.add(pole, arm, head);
+    g.add(buildParapetRun(edgeOff, s0, s1));
   }
   return g;
 }
 
 function barrierGeometry(segLen) {
-  // F-type concrete barrier profile
   const s = new THREE.Shape();
   s.moveTo(-0.24, 0); s.lineTo(0.24, 0); s.lineTo(0.20, 0.08); s.lineTo(0.12, 0.36);
   s.lineTo(0.09, 0.9); s.lineTo(-0.09, 0.9); s.lineTo(-0.12, 0.36); s.lineTo(-0.20, 0.08);
@@ -934,7 +1078,175 @@ function barrierGeometry(segLen) {
   return geo;
 }
 
-/* ---- the main build ---- */
+function segmentRun(geo, material, zOff, s0, s1, segLen) {
+  // instanced segments following the curved alignment + grade
+  const n = Math.max(1, Math.ceil((s1 - s0) / segLen));
+  const inst = new THREE.InstancedMesh(geo, material, n);
+  const m4 = new THREE.Matrix4(), v = new THREE.Vector3(), one = new THREE.Vector3(1, 1, 1);
+  const qy = new THREE.Quaternion(), qp = new THREE.Quaternion(), q = new THREE.Quaternion();
+  for (let i = 0; i < n; i++) {
+    const s = s0 + i * segLen;
+    const f = roadFrame(s);
+    qy.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(-f.tz, f.tx));
+    qp.setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.atan2(roadY(s + segLen) - roadY(s), segLen));
+    q.copy(qy).multiply(qp);
+    v.set(f.x + f.nx * zOff, roadY(s) + 0.02, f.z + f.nz * zOff);
+    m4.compose(v, q, one);
+    inst.setMatrixAt(i, m4);
+  }
+  inst.castShadow = true;
+  return inst;
+}
+
+function buildBarrierRun(zOff) {
+  const [e0, e1] = elevatedExtent();
+  return segmentRun(barrierGeometry(4.1), MAT.barrier, zOff, e0, e1, 4);
+}
+
+function buildParapetRun(zOff, s0, s1) {
+  const s = new THREE.Shape();
+  s.moveTo(-0.20, 0); s.lineTo(0.20, 0); s.lineTo(0.15, PARAPET_H); s.lineTo(-0.15, PARAPET_H);
+  s.closePath();
+  const geo = new THREE.ExtrudeGeometry(s, { depth: 4.1, bevelEnabled: false });
+  geo.rotateY(Math.PI / 2);
+  return segmentRun(geo, MAT.barrier, zOff, s0, s1, 4);
+}
+
+function buildBalustrade(zOff, excl) {
+  const g = new THREE.Group();
+  const [e0, e1] = elevatedExtent();
+  const inExcl = s => excl && s > excl[0] - 1 && s < excl[1] + 1;
+  const xs = [];
+  for (let s = e0; s <= e1; s += 2.5) if (!inExcl(s)) xs.push(s);
+  if (!xs.length) return g;
+  const postGeo = new THREE.BoxGeometry(0.07, 1.3, 0.07);
+  const posts = new THREE.InstancedMesh(postGeo, MAT.screenFrame, xs.length);
+  const m4 = new THREE.Matrix4();
+  xs.forEach((s, i) => {
+    const f = roadFrame(s);
+    m4.makeTranslation(f.x + f.nx * zOff, roadY(s) + 0.65, f.z + f.nz * zOff);
+    posts.setMatrixAt(i, m4);
+  });
+  g.add(posts);
+  const ranges = excl
+    ? [[e0, Math.max(e0, excl[0])], [Math.min(e1, excl[1]), e1]].filter(r => r[1] - r[0] > 4)
+    : [[e0, e1]];
+  for (const ry of [0.7, 1.25]) for (const [r0, r1] of ranges) {
+    const pts = [];
+    for (let s = r0; s <= r1; s += 4) {
+      const f = roadFrame(s);
+      pts.push(new THREE.Vector3(f.x + f.nx * zOff, roadY(s) + ry, f.z + f.nz * zOff));
+    }
+    g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
+                         new THREE.LineBasicMaterial({ color: 0x37424a })));
+  }
+  return g;
+}
+
+function buildStreetLights() {
+  const g = new THREE.Group();
+  const [e0, e1] = elevatedExtent();
+  const RW = derived.roadWidth;
+  const headMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, emissive: 0xfff7d0, emissiveIntensity: 0.5 });
+  let alt = 1;
+  for (let s = e0 + 12; s <= e1 - 8; s += 42) {
+    const side = alt; alt = -alt;
+    const f = roadFrame(s);
+    const y = roadY(s);
+    const zP = side * (RW / 2 + 0.75);
+    const px = f.x + f.nx * zP, pz = f.z + f.nz * zP;
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.1, 9, 8), MAT.mast);
+    pole.position.set(px, y + 4.5, pz);
+    pole.castShadow = true;
+    const armOff = zP - side * 1.2;
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 2.4), MAT.mast);
+    arm.position.set(f.x + f.nx * armOff, y + 8.9, f.z + f.nz * armOff);
+    arm.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(f.nx, f.nz));
+    const headOff = zP - side * 2.2;
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.12, 0.8), headMat);
+    head.position.set(f.x + f.nx * headOff, y + 8.82, f.z + f.nz * headOff);
+    g.add(pole, arm, head);
+  }
+  return g;
+}
+
+/* ---- piers, approaches, the bridge itself ---- */
+
+function buildPier(sPier, capTopY, W) {
+  const g = new THREE.Group();
+  const f = roadFrame(sPier);
+  const px = f.x, pz = f.z;
+  const near = railPath.nearest(px, pz);
+  const clash = near.dist < 12;
+  if (clash) derived.clash = true;
+  const redMat = clash ? new THREE.MeshStandardMaterial({ color: 0xd05050, roughness: 0.85 }) : null;
+
+  // pier axis parallel to the rail tangent at the nearest rail point
+  const rt = { x: near.tx, z: near.tz };
+  const yaw = Math.atan2(rt.x, rt.z);
+
+  const capH = 1.4;
+  const cap = new THREE.Mesh(new THREE.BoxGeometry(2.0, capH, W + 0.8), redMat || MAT.concrete);
+  cap.position.set(px, capTopY - capH / 2, pz);
+  cap.rotation.y = yaw;
+  cap.castShadow = true;
+  g.add(cap);
+
+  const colH = capTopY - capH;
+  const nCols = W > 18 ? 3 : 2;
+  const colMat = redMat || MAT.pier;
+  for (let i = 0; i < nCols; i++) {
+    const t = nCols === 1 ? 0 : -0.5 + i / (nCols - 1);
+    const col = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.05, colH, 20), colMat);
+    col.scale.x = 0.62;
+    col.position.set(px + rt.x * t * (W - 4), colH / 2, pz + rt.z * t * (W - 4));
+    col.rotation.y = yaw;
+    col.castShadow = true;
+    g.add(col);
+  }
+  return g;
+}
+
+function buildApproach(side) {
+  const g = new THREE.Group();
+  const W = derived.deckWidth;
+  const L = derived.rampLen;
+  const steps = 30;
+  const isWall = params.approach === 'retaining';
+  const pos = [], idx = [], uv = [];
+  const quad = (p1, p2, p3, p4) => {
+    const base = pos.length / 3;
+    pos.push(...p1, ...p2, ...p3, ...p4);
+    idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
+    uv.push(0, 0, 1, 0, 1, 1, 0, 1);
+  };
+  const sta = [];
+  for (let i = 0; i <= steps; i++) {
+    const s = side * (derived.x1 + (i / steps) * L);
+    const f = roadFrame(s);
+    sta.push({ f, y: Math.max(0, roadY(s) - 0.05) });
+  }
+  for (let i = 0; i < steps; i++) {
+    const a = sta[i], b = sta[i + 1];
+    if (a.y < 0.15 && b.y < 0.15) continue;
+    const spA = isWall ? 0 : a.y * 1.6, spB = isWall ? 0 : b.y * 1.6;
+    const P = (st, off, y) => [st.f.x + st.f.nx * off, y, st.f.z + st.f.nz * off];
+    // top
+    quad(P(a, -W / 2, a.y), P(b, -W / 2, b.y), P(b, W / 2, b.y), P(a, W / 2, a.y));
+    // sides
+    quad(P(a, -(W / 2 + spA), 0), P(b, -(W / 2 + spB), 0), P(b, -W / 2, b.y), P(a, -W / 2, a.y));
+    quad(P(a, W / 2, a.y), P(b, W / 2, b.y), P(b, W / 2 + spB, 0), P(a, W / 2 + spA, 0));
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  geo.setIndex(idx);
+  geo.computeVertexNormals();
+  const mesh = new THREE.Mesh(geo, isWall ? MAT.mse : MAT.embankment);
+  mesh.castShadow = true; mesh.receiveShadow = true;
+  g.add(mesh);
+  return g;
+}
 
 function buildBridge() {
   computeDerived();
@@ -943,53 +1255,58 @@ function buildBridge() {
   const W = derived.deckWidth, RW = derived.roadWidth;
   const spans = params.spanLengths.slice(0, params.spanCount);
   const deckTop = derived.deckTopY;
-
+  const girderTopY = deckTop - 0.42;
   derived.clash = false;
 
-  /* deck slab — one piece */
-  const slab = new THREE.Mesh(new THREE.BoxGeometry(derived.totalLen, 0.42, W), MAT.concrete);
-  slab.position.set(0, deckTop - 0.21, 0);
-  slab.castShadow = true; slab.receiveShadow = true;
-  bridgeGroup.add(slab);
-
-  /* spans: girders / arch */
-  let xCursor = derived.x0;
-  const girderTopY = deckTop - 0.42;
+  /* spans as straight chords between pier stations on the curved alignment */
+  let sCursor = derived.x0;
   for (let i = 0; i < spans.length; i++) {
-    const len = spans[i];
-    let spanObj;
-    if (params.structure === 'super-t')      spanObj = superTSpan(len, W);
-    else if (params.structure === 'steel')   spanObj = steelSpan(len, W);
-    else                                     spanObj = archSpan(len, W, 0.42);
-    spanObj.position.set(xCursor, params.structure === 'arch' ? deckTop - 0.42 : girderTopY, 0);
-    bridgeGroup.add(spanObj);
+    const sEnd = sCursor + spans[i];
+    const fA = roadFrame(sCursor), fB = roadFrame(sEnd);
+    const chord = Math.hypot(fB.x - fA.x, fB.z - fA.z);
+    const yaw = Math.atan2(-(fB.z - fA.z), fB.x - fA.x);
 
-    /* pier between spans */
-    if (i < spans.length - 1) {
-      const px = xCursor + len;
-      const pier = buildPier(px, girderTopY, W);
-      bridgeGroup.add(pier);
-    }
-    xCursor += len;
+    const wrap = new THREE.Group();
+    wrap.position.set(fA.x, 0, fA.z);
+    wrap.rotation.y = yaw;
+
+    // deck slab segment
+    const slab = new THREE.Mesh(new THREE.BoxGeometry(chord + 0.3, 0.42, W), MAT.concrete);
+    slab.position.set(chord / 2, deckTop - 0.21, 0);
+    slab.castShadow = true; slab.receiveShadow = true;
+    wrap.add(slab);
+
+    let spanObj;
+    if (params.structure === 'super-t')      spanObj = superTSpan(chord, W);
+    else if (params.structure === 'steel')   spanObj = steelSpan(chord, W);
+    else                                     spanObj = archSpan(chord, W, 0.42);
+    spanObj.position.y = params.structure === 'arch' ? deckTop - 0.42 : girderTopY;
+    wrap.add(spanObj);
+    bridgeGroup.add(wrap);
+
+    if (i < spans.length - 1) bridgeGroup.add(buildPier(sEnd, girderTopY, W));
+    sCursor = sEnd;
   }
 
   /* abutments + approaches */
   for (const side of [-1, 1]) {
-    const ax = side * derived.x1;
+    const f = roadFrame(side * derived.x1);
     const ab = new THREE.Mesh(new THREE.BoxGeometry(2.2, girderTopY, W + 1.2), MAT.concrete);
-    ab.position.set(ax + side * 1.1, girderTopY / 2, 0);
+    ab.position.set(f.x + f.tx * side * 1.1, girderTopY / 2, f.z + f.tz * side * 1.1);
+    ab.rotation.y = Math.atan2(-f.tz, f.tx);
     ab.castShadow = true;
     bridgeGroup.add(ab);
     bridgeGroup.add(buildApproach(side));
   }
 
-  /* continuous road surface + shared-use paths along profile */
-  bridgeGroup.add(buildRibbon(RW, 0, MAT.asphalt, 0.05, RW / 8));
+  /* continuous road surface + shared-use paths following the curve and grade */
+  bridgeGroup.add(pathRibbon(roadPath, -derived.roadEnd, derived.roadEnd, RW, 0, s => roadY(s) + 0.05, MAT.asphalt));
   for (const side of [-1, 1]) {
-    bridgeGroup.add(buildRibbon(3.0, side * (RW / 2 + 0.45 + 1.5 + 0.05), MAT.path, 0.06, 1));
+    bridgeGroup.add(pathRibbon(roadPath, -derived.roadEnd, derived.roadEnd, 3.0,
+      side * (RW / 2 + 0.45 + 1.5 + 0.05), s => roadY(s) + 0.06, MAT.path));
   }
 
-  /* traffic barriers between road and SUP (full elevated length) */
+  /* traffic barriers between road and SUP */
   if (params.trafficBarriers) {
     for (const side of [-1, 1]) bridgeGroup.add(buildBarrierRun(side * (RW / 2 + 0.275)));
   }
@@ -1008,170 +1325,22 @@ function buildBridge() {
 
   /* project road upgrades at ground level (per the proposed-treatments plan) */
   {
-    const qRail = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), railDir);
     // Charlotte Street ↔ Alawoona Road connection under the overpass (east of rail)
-    const east = new THREE.Mesh(new THREE.BoxGeometry(7, 0.1, 520), MAT.linkRoad);
-    east.position.copy(railPoint(0, 26)); east.position.y = 0.02;
-    east.quaternion.copy(qRail);
+    bridgeGroup.add(pathRibbon(railPath, -280, 280, 7, 26, () => 0.03, MAT.linkRoad, 6));
     // new link road ↔ Palina Court connection under the overpass (west of rail)
-    const west = new THREE.Mesh(new THREE.BoxGeometry(7, 0.1, 500), MAT.linkRoad);
-    west.position.copy(railPoint(0, -22)); west.position.y = 0.02;
-    west.quaternion.copy(qRail);
-    // new link road north of Curtis Road serving Playford Alive East
-    const link = new THREE.Mesh(new THREE.BoxGeometry(330, 0.1, 7), MAT.linkRoad);
-    link.position.set(-175, 0.02, -120);
-    // Admiral Parade / Playford Alive East connection
-    const adm = new THREE.Mesh(new THREE.BoxGeometry(7, 0.1, 310), MAT.linkRoad);
-    adm.position.set(-340, 0.02, -145);
-    for (const m of [east, west, link, adm]) { m.receiveShadow = true; bridgeGroup.add(m); }
+    bridgeGroup.add(pathRibbon(railPath, -220, 220, 7, -22, () => 0.03, MAT.linkRoad, 6));
+    // new link road north of Curtis Road serving Playford Alive East:
+    // from the Admiral Parade connection, curving east to meet the west underpass road
+    const fW = railFrame(-112);
+    bridgeGroup.add(groundRoad([
+      { x: -340, z: -18 }, { x: -312, z: -68 }, { x: -250, z: -100 },
+      { x: -150, z: -112 }, { x: fW.x + fW.nx * -22, z: fW.z + fW.nz * -22 },
+    ], 7));
+    // Admiral Parade / Playford Alive East connection, north from Curtis Road
+    bridgeGroup.add(groundRoad([{ x: -340, z: 2 }, { x: -340, z: -300 }], 7));
   }
 
   updateStats();
-}
-
-function buildPier(px, capTopY, W) {
-  const g = new THREE.Group();
-  const clash = Math.abs(px * Math.cos(railB)) < 13;   // inside rail corridor clear zone
-  if (clash) derived.clash = true;
-  const mat = clash ? new THREE.MeshStandardMaterial({ color: 0xd05050, roughness: 0.85 }) : MAT.concrete;
-  const capH = 1.4;
-  const cap = new THREE.Mesh(new THREE.BoxGeometry(2.0, capH, W + 0.8), mat);
-  cap.position.set(px, capTopY - capH / 2, 0);
-  cap.rotation.y = railB;        // pier skewed parallel to the rail line
-  cap.castShadow = true;
-  g.add(cap);
-  const colH = capTopY - capH;
-  const nCols = W > 18 ? 3 : 2;
-  // terracotta blade columns with the white sweep artwork, per the renders
-  const colMat = clash ? mat : MAT.pier;
-  for (let i = 0; i < nCols; i++) {
-    const t = nCols === 1 ? 0 : -0.5 + i / (nCols - 1);
-    const col = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.05, colH, 20), colMat);
-    col.scale.x = 0.62;                       // elongated oval section, long axis along the rail
-    const local = new THREE.Vector3(0, 0, t * (W - 4)).applyAxisAngle(new THREE.Vector3(0, 1, 0), railB);
-    col.position.set(px + local.x, colH / 2, local.z);
-    col.rotation.y = railB;
-    col.castShadow = true;
-    g.add(col);
-  }
-  return g;
-}
-
-function buildApproach(side) {
-  const g = new THREE.Group();
-  const W = derived.deckWidth;
-  const x0 = derived.x1;                       // abutment face (mirrored by side)
-  const L = derived.rampLen;
-  const steps = 30;
-  // ramp body: vertical-walled (MSE) or sloped embankment, built as profile strip
-  const isWall = params.approach === 'retaining';
-  const topW = W, botExtra = isWall ? 0 : 2.2;  // embankment side slope spread per metre height handled per segment
-  const pos = [], idx = [], uv = [];
-  // build a closed prism by segments
-  const seg = [];
-  for (let i = 0; i <= steps; i++) {
-    const x = x0 + (i / steps) * L;
-    seg.push({ x: side * x, y: Math.max(0, roadY(side * x) - 0.05) });
-  }
-  for (let i = 0; i < steps; i++) {
-    const a = seg[i], b = seg[i + 1];
-    if (a.y < 0.15 && b.y < 0.15) continue;
-    const ya = a.y, yb = b.y;
-    const spreadA = isWall ? 0 : ya * 1.6, spreadB = isWall ? 0 : yb * 1.6;
-    const quad = (p1, p2, p3, p4) => {
-      const base = pos.length / 3;
-      pos.push(...p1, ...p2, ...p3, ...p4);
-      idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
-      uv.push(0, 0, 1, 0, 1, 1, 0, 1);
-    };
-    // top
-    quad([a.x, ya, -topW / 2], [b.x, yb, -topW / 2], [b.x, yb, topW / 2], [a.x, ya, topW / 2]);
-    // sides
-    quad([a.x, 0, -(topW / 2 + spreadA)], [b.x, 0, -(topW / 2 + spreadB)], [b.x, yb, -topW / 2], [a.x, ya, -topW / 2]);
-    quad([a.x, ya, topW / 2], [b.x, yb, topW / 2], [b.x, 0, topW / 2 + spreadB], [a.x, 0, topW / 2 + spreadA]);
-  }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
-  geo.setIndex(idx);
-  geo.computeVertexNormals();
-  const mesh = new THREE.Mesh(geo, isWall ? MAT.mse : MAT.embankment);
-  mesh.castShadow = true; mesh.receiveShadow = true;
-  g.add(mesh);
-  return g;
-}
-
-function buildRibbon(width, zOff, material, lift, repAcross) {
-  const L = derived.roadEnd;
-  const step = 4;
-  const pos = [], uvA = [], idx = [];
-  let i = 0;
-  for (let x = -L; x <= L; x += step) {
-    const y = roadY(x) + lift;
-    pos.push(x, y, zOff - width / 2, x, y, zOff + width / 2);
-    uvA.push(0, x / 16, 1, x / 16);
-    if (x > -L) idx.push(i - 2, i, i + 1, i - 2, i + 1, i - 1);
-    i += 2;
-  }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvA, 2));
-  geo.setIndex(idx);
-  geo.computeVertexNormals();
-  const mesh = new THREE.Mesh(geo, material);
-  mesh.receiveShadow = true;
-  return mesh;
-}
-
-function elevatedExtent() {
-  // x-range where the road is meaningfully above ground (bridge + ramps)
-  const lim = derived.x1 + derived.rampLen * 0.97;
-  return [-lim, lim];
-}
-
-function buildBarrierRun(zOff) {
-  const [e0, e1] = elevatedExtent();
-  const segLen = 4;
-  const n = Math.ceil((e1 - e0) / segLen);
-  const geo = barrierGeometry(segLen * 1.02);
-  const inst = new THREE.InstancedMesh(geo, MAT.barrier, n);
-  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3();
-  for (let i = 0; i < n; i++) {
-    const x = e0 + i * segLen;
-    const y0 = roadY(x), y1 = roadY(x + segLen);
-    q.setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.atan2(y1 - y0, segLen));
-    m4.compose(new THREE.Vector3(x, y0 + 0.02, zOff), q, new THREE.Vector3(1, 1, 1));
-    inst.setMatrixAt(i, m4);
-  }
-  inst.castShadow = true;
-  return inst;
-}
-
-function buildBalustrade(zOff, excl) {
-  const g = new THREE.Group();
-  const [e0, e1] = elevatedExtent();
-  const inExcl = x => excl && x > excl[0] - 1 && x < excl[1] + 1;
-  const xs = [];
-  for (let x = e0; x <= e1; x += 2.5) if (!inExcl(x)) xs.push(x);
-  if (!xs.length) return g;
-  const postGeo = new THREE.BoxGeometry(0.07, 1.3, 0.07);
-  const posts = new THREE.InstancedMesh(postGeo, MAT.screenFrame, xs.length);
-  const m4 = new THREE.Matrix4();
-  xs.forEach((x, i) => {
-    m4.makeTranslation(x, roadY(x) + 0.65, zOff);
-    posts.setMatrixAt(i, m4);
-  });
-  g.add(posts);
-  const ranges = excl
-    ? [[e0, Math.max(e0, excl[0])], [Math.min(e1, excl[1]), e1]].filter(r => r[1] - r[0] > 4)
-    : [[e0, e1]];
-  for (const ry of [0.7, 1.25]) for (const [r0, r1] of ranges) {
-    const pts = [];
-    for (let x = r0; x <= r1; x += 4) pts.push(new THREE.Vector3(x, roadY(x) + ry, zOff));
-    g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
-                         new THREE.LineBasicMaterial({ color: 0x37424a })));
-  }
-  return g;
 }
 
 /* ---------------- animated traffic ---------------- */
@@ -1201,26 +1370,28 @@ function buildCars() {
   }
 }
 
-let train;
+const trainCars = [];
 function buildTrain() {
-  train = new THREE.Group();
   const bodyMat = new THREE.MeshStandardMaterial({ color: 0x55585c, roughness: 0.35, metalness: 0.4 });
   const faceMat = new THREE.MeshStandardMaterial({ color: 0xc8453a, roughness: 0.4 });
   for (let c = 0; c < 3; c++) {
-    const car = new THREE.Mesh(new THREE.BoxGeometry(2.9, 3.4, 24), bodyMat);
-    car.position.set(0, 2.4, c * 25 - 25);
-    car.castShadow = true;
-    train.add(car);
+    const car = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(2.9, 3.4, 24), bodyMat);
+    body.position.y = 2.4;
+    body.castShadow = true;
     const stripe = new THREE.Mesh(new THREE.BoxGeometry(2.95, 0.8, 24), faceMat);
-    stripe.position.set(0, 1.6, c * 25 - 25);
-    train.add(stripe);
+    stripe.position.y = 1.6;
+    car.add(body, stripe);
+    if (c === 2) {
+      const nose = new THREE.Mesh(new THREE.BoxGeometry(2.9, 3.0, 1.2), faceMat);
+      nose.position.set(0, 2.2, 12.5);
+      car.add(nose);
+    }
+    scene.add(car);
+    trainCars.push(car);
   }
-  const nose = new THREE.Mesh(new THREE.BoxGeometry(2.9, 3.0, 1.2), faceMat);
-  nose.position.set(0, 2.2, 38);
-  train.add(nose);
-  train.userData = { s: -650, speed: 19 };
-  scene.add(train);
 }
+const trainState = { s: -650, speed: 19 };
 buildTrain();
 
 /* ---------------- UI wiring ---------------- */
@@ -1257,7 +1428,7 @@ document.querySelectorAll('#typeBtns button').forEach(b => b.addEventListener('c
   params.structure = b.dataset.type;
   if (params.structure === 'arch' && params.spanCount === 3 &&
       params.spanLengths.slice(0, 3).join() === '30,36,30') {
-    params.spanCount = 1; params.spanLengths[0] = 78;     // a single long arch reads best
+    params.spanCount = 1; params.spanLengths[0] = 78;
     $('spanCount').value = 1; $('spanCountVal').textContent = '1';
   }
   setTypeButtons(); renderSpanList(); buildBridge();
@@ -1298,7 +1469,10 @@ $('bldgOpacity').addEventListener('input', e => {
   $('bldgOpacityVal').textContent = (+e.target.value).toFixed(2);
   MAT.building.opacity = params.bldgOpacity;
 });
-$('showTrain').addEventListener('change', e => { params.showTrain = e.target.checked; train.visible = e.target.checked; });
+$('showTrain').addEventListener('change', e => {
+  params.showTrain = e.target.checked;
+  trainCars.forEach(c => c.visible = e.target.checked);
+});
 $('showCars').addEventListener('change', e => { params.showCars = e.target.checked; trafficGroup.visible = e.target.checked; });
 $('geoX').addEventListener('input', e => { params.geoX = +e.target.value; $('geoXVal').textContent = e.target.value + ' m'; applyGeoOffset(); });
 $('geoZ').addEventListener('input', e => { params.geoZ = +e.target.value; $('geoZVal').textContent = e.target.value + ' m'; applyGeoOffset(); });
@@ -1322,9 +1496,8 @@ const views = {
   overview: { p: [270, 210, 290], t: [0, 10, 0] },
   approach: { p: [-330, 26, 95], t: [-40, 14, 0] },
   rail:     { p: [110, 18, -260], t: [0, 9, 0] },
-  path:     { p: [-60, derivedDeckEye(), 14], t: [60, 12, 6] },
+  path:     { p: [-60, 12, 14], t: [60, 12, 6] },
 };
-function derivedDeckEye() { return derived.deckTopY + 1.7; }
 document.querySelectorAll('#viewBtns button').forEach(b => b.addEventListener('click', () => {
   const v = views[b.dataset.view];
   if (b.dataset.view === 'path') { v.p[1] = derived.deckTopY + 1.7; v.t[1] = derived.deckTopY + 1; }
@@ -1336,11 +1509,14 @@ document.querySelectorAll('#viewBtns button').forEach(b => b.addEventListener('c
 
 renderSpanList();
 setTypeButtons();
+buildRail();
 buildBridge();
 buildCars();
+alignSite();
 document.getElementById('loading').remove();
 
 const clock = new THREE.Clock();
+const yAxis = new THREE.Vector3(0, 1, 0);
 function animate() {
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.1);
@@ -1350,19 +1526,21 @@ function animate() {
     u.s += u.speed * u.dir * dt;
     if (u.s > derived.roadEnd) u.s = -derived.roadEnd;
     if (u.s < -derived.roadEnd) u.s = derived.roadEnd;
+    const f = roadFrame(u.s);
     const y = roadY(u.s), yAhead = roadY(u.s + 2 * u.dir);
-    car.position.set(u.s, y + 0.62, u.lane);
-    car.rotation.z = Math.atan2(yAhead - y, 2) * u.dir;
-    car.rotation.y = u.dir > 0 ? 0 : Math.PI;
+    car.position.set(f.x + f.nx * u.lane, y + 0.62, f.z + f.nz * u.lane);
+    car.rotation.set(0, Math.atan2(-f.tz, f.tx) + (u.dir > 0 ? 0 : Math.PI), Math.atan2(yAhead - y, 2));
   }
 
   if (params.showTrain) {
-    const u = train.userData;
-    u.s += u.speed * dt;
-    if (u.s > 650) u.s = -650;
-    const p = railPoint(u.s, -2.4);
-    train.position.copy(p);
-    train.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), railDir);
+    trainState.s += trainState.speed * dt;
+    if (trainState.s > 650) trainState.s = -650;
+    for (let i = 0; i < trainCars.length; i++) {
+      const s = trainState.s + i * 25.5;
+      const f = railFrame(s);
+      trainCars[i].position.set(f.x + f.nx * -2.4, 0, f.z + f.nz * -2.4);
+      trainCars[i].quaternion.setFromAxisAngle(yAxis, Math.atan2(f.tx, f.tz));
+    }
   }
 
   controls.update();

@@ -44,8 +44,13 @@ falls back to flat-colour ground and procedural building massing offline).
   shared-use paths, plus outer pedestrian balustrades
 
 **Site context**
-- **Satellite imagery** (Esri World Imagery) draped on the ground, georeferenced
-  to the crossing, with fine-tune alignment sliders
+- **Alignment-driven geometry**: the model queries OSM for the level-crossing
+  node and the real Curtis Road and Gawler line centrelines — the bridge deck
+  (as straight chords between piers), approaches, screens, barriers, track and
+  traffic all follow the actual curved alignments
+- **Satellite imagery** (Esri World Imagery by default, or any custom XYZ tile
+  URL) draped on the ground, georeferenced to the crossing, with fine-tune
+  alignment sliders
 - **Building envelopes** extruded from OpenStreetMap footprints (procedural
   suburban massing as a fallback), with opacity control
 - Electrified double-track Gawler line with overhead wiring masts, Munno Para
