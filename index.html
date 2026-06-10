@@ -46,6 +46,7 @@
     flex: 1; background: #1c2630; color: var(--text); border: 1px solid #32414f; border-radius: 5px; padding: 4px 6px; font-size: 12px;
   }
   .row input[type=checkbox] { accent-color: var(--accent); width: 15px; height: 15px; }
+  .row input[type=text] { flex: 1; background: #1c2630; color: var(--text); border: 1px solid #32414f; border-radius: 5px; padding: 4px 6px; font-size: 11px; }
   .row.check label { flex: 1; cursor: pointer; }
 
   #spanList .row label { flex-basis: 64px; }
@@ -115,9 +116,9 @@
   <details open>
     <summary>Safety screens &amp; barriers</summary>
     <div class="body">
-      <div class="row check"><input type="checkbox" id="throwScreens" checked><label for="throwScreens">Throw screens (curved, perforated — over rail corridor)</label></div>
+      <div class="row check"><input type="checkbox" id="throwScreens" checked><label for="throwScreens">Throw screens (kinked blades, perforated corten mesh + wave motif)</label></div>
       <div class="row"><label>Screen extent</label>
-        <select id="screenExtent"><option value="rail" selected>Rail corridor only</option><option value="full">Full bridge length</option></select></div>
+        <select id="screenExtent"><option value="full" selected>Full elevated length</option><option value="rail">Rail corridor only</option></select></div>
       <div class="row check"><input type="checkbox" id="trafficBarriers" checked><label for="trafficBarriers">Concrete traffic barriers (road / shared-use path)</label></div>
       <div class="row check"><input type="checkbox" id="balustrade" checked><label for="balustrade">Pedestrian balustrade on outer deck edges</label></div>
     </div>
@@ -126,7 +127,11 @@
   <details open>
     <summary>Site context</summary>
     <div class="body">
-      <div class="row check"><input type="checkbox" id="showSat" checked><label for="showSat">Satellite imagery (Esri World Imagery)</label></div>
+      <div class="row check"><input type="checkbox" id="showSat" checked><label for="showSat">Satellite imagery</label></div>
+      <div class="row"><label>Imagery source</label>
+        <select id="imgSource"><option value="esri" selected>Esri World Imagery</option><option value="custom">Custom XYZ URL</option></select></div>
+      <div class="row" id="customUrlRow" style="display:none"><label>Tile URL</label>
+        <input type="text" id="customUrl" placeholder="https://…/{z}/{x}/{y}.jpg"></div>
       <div class="row check"><input type="checkbox" id="showBuildings" checked><label for="showBuildings">Building envelopes (OpenStreetMap footprints)</label></div>
       <div class="row"><label>Envelope opacity</label>
         <input type="range" id="bldgOpacity" min="0.2" max="1" step="0.05" value="0.92"><span class="val" id="bldgOpacityVal">0.92</span></div>
@@ -191,10 +196,12 @@ const params = {
   clearance: 6.8,                // ground (rail level) to deck soffit — 25 kV OHW corridor
   approach: 'retaining',
   throwScreens: true,
-  screenExtent: 'rail',
+  screenExtent: 'full',
   trafficBarriers: true,
   balustrade: true,
   showSat: true,
+  imgSource: 'esri',
+  customUrl: '',
   showBuildings: true,
   bldgOpacity: 0.92,
   showTrain: true,
@@ -287,15 +294,45 @@ const msePanelTex = makeCanvasTex((g, w, h) => {
   }
 }, 256, 256, 8, 1);
 
-const screenTex = makeCanvasTex((g, w, h) => {
-  g.fillStyle = 'rgba(52,62,70,0.92)'; g.fillRect(0, 0, w, h);
-  g.fillStyle = 'rgba(255,255,255,0.0)';
-  g.globalCompositeOperation = 'destination-out';
-  for (let y = 6; y < h; y += 13) for (let x = 6; x < w; x += 13) {
-    g.beginPath(); g.arc(x, y, 4, 0, Math.PI * 2); g.fill();   // perforations
+// perforated corten/copper mesh with the white serpentine wave motif of the concept renders
+const cortenTex = makeCanvasTex((g, w, h) => {
+  // canvas starts transparent — draw the metal as dots so the holes see through
+  const rust = ['#9a4f2e', '#b05c33', '#c06a3d', '#a85531'];
+  for (let y = 3; y < h; y += 5) for (let x = 3 + (y % 10 < 5 ? 0 : 2.5); x < w; x += 5) {
+    g.fillStyle = rust[(x * 7 + y * 13) % rust.length | 0];
+    g.globalAlpha = 0.9;
+    g.beginPath(); g.arc(x, y, 1.9, 0, Math.PI * 2); g.fill();
   }
-}, 256, 256, 6, 2);
-screenTex.premultiplyAlpha = true;
+  g.globalAlpha = 0.85;
+  g.strokeStyle = '#f4f1ea';
+  g.lineWidth = h * 0.085;
+  g.lineCap = 'round';
+  g.beginPath();
+  for (let x = -10; x <= w + 10; x += 8) {
+    const y = h * 0.46 + Math.sin((x / w) * Math.PI * 2) * h * 0.24;
+    x <= -10 + 8 ? g.moveTo(x, y) : g.lineTo(x, y);
+  }
+  g.stroke();
+  g.globalAlpha = 1;
+  g.fillStyle = '#2e3940';                       // top & bottom edge rails
+  g.fillRect(0, 0, w, 5); g.fillRect(0, h - 5, w, 5);
+}, 1024, 256, 1, 1);
+
+// terracotta pier blades with the white sweep artwork
+const pierTex = makeCanvasTex((g, w, h) => {
+  g.fillStyle = '#a6503a'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 600; i++) {
+    g.fillStyle = `rgba(255,235,220,${Math.random() * 0.05})`;
+    g.fillRect(Math.random() * w, Math.random() * h, 3, 3);
+  }
+  g.strokeStyle = 'rgba(244,241,234,0.92)';
+  g.lineWidth = h * 0.13;
+  g.lineCap = 'round';
+  g.beginPath();
+  g.moveTo(-w * 0.1, h * 0.72);
+  g.bezierCurveTo(w * 0.35, h * 0.15, w * 0.6, h * 0.95, w * 1.1, h * 0.35);
+  g.stroke();
+}, 512, 256, 1, 1);
 
 const MAT = {
   concrete:  new THREE.MeshStandardMaterial({ color: 0xc9c4b8, roughness: 0.9 }),
@@ -303,9 +340,11 @@ const MAT = {
   steel:     new THREE.MeshStandardMaterial({ color: 0x4f6275, roughness: 0.45, metalness: 0.55 }),
   archSteel: new THREE.MeshStandardMaterial({ color: 0xdfe3e6, roughness: 0.4, metalness: 0.4 }),
   barrier:   new THREE.MeshStandardMaterial({ color: 0xd2cec5, roughness: 0.85 }),
-  screen:    new THREE.MeshStandardMaterial({ map: screenTex, transparent: true, side: THREE.DoubleSide,
-                                              color: 0xffffff, roughness: 0.6, metalness: 0.3, depthWrite: false }),
+  screen:    new THREE.MeshStandardMaterial({ map: cortenTex, transparent: true, side: THREE.DoubleSide,
+                                              roughness: 0.65, metalness: 0.25, depthWrite: false }),
   screenFrame: new THREE.MeshStandardMaterial({ color: 0x2e3940, roughness: 0.5, metalness: 0.5 }),
+  pier:      new THREE.MeshStandardMaterial({ map: pierTex, roughness: 0.85 }),
+  linkRoad:  new THREE.MeshStandardMaterial({ color: 0x44474a, roughness: 0.95 }),
   rail:      new THREE.MeshStandardMaterial({ color: 0x7a7d80, roughness: 0.35, metalness: 0.8 }),
   sleeper:   new THREE.MeshStandardMaterial({ color: 0x5a5650, roughness: 0.95 }),
   ballast:   new THREE.MeshStandardMaterial({ color: 0x6e6a64, roughness: 1 }),
@@ -336,7 +375,19 @@ function lonLatToLocal(lon, lat) {
   return { x: (m.x - centerMerc.x) * groundScale, z: -(m.y - centerMerc.y) * groundScale };
 }
 
+function tileURL(z, x, y) {
+  if (params.imgSource === 'custom' && params.customUrl)
+    return params.customUrl.replace('{z}', z).replace('{x}', x).replace('{y}', y);
+  return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`;
+}
+
 function buildSatellite(atLat, atLon) {
+  for (const m of geoGroup.children.filter(o => o.userData.isSatTile)) {
+    geoGroup.remove(m);
+    m.geometry.dispose();
+    if (m.material.map) m.material.map.dispose();
+    m.material.dispose();
+  }
   const z = CONFIG.tileZoom, n = 2 ** z;
   const cx = Math.floor((atLon + 180) / 360 * n);
   const latR = atLat * DEG;
@@ -362,9 +413,10 @@ function buildSatellite(atLat, atLon) {
     mesh.position.set(px, -0.08, pz);
     mesh.receiveShadow = true;
     mesh.userData.isSatTile = true;
+    mesh.visible = params.showSat;
     geoGroup.add(mesh);
     loader.load(
-      `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${ty}/${tx}`,
+      tileURL(z, tx, ty),
       tex => { tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8; mat.map = tex; mat.color.set(0xffffff); mat.needsUpdate = true; },
       undefined, () => {} // keep flat-colour fallback on error
     );
@@ -388,10 +440,20 @@ const buildingGroup = new THREE.Group();
 geoGroup.add(buildingGroup);
 let buildingsSource = 'loading…';
 let siteStatus = 'aligning to OSM level-crossing node…';
-const geoAuto = { x: 0, z: 0 };   // automatic georeference correction (OSM crossing → origin)
+let geoRot = 0;                       // rotation so the real Curtis Rd lies along model +X
+const geoCross = { x: 0, z: 0 };      // crossing point in geo-local coords
+const site = { lat: CONFIG.center.lat, lon: CONFIG.center.lon };
+
+function geoToWorld(x, z) {
+  const c = Math.cos(geoRot), s = Math.sin(geoRot);
+  return { x: x * c + z * s + geoGroup.position.x, z: -x * s + z * c + geoGroup.position.z };
+}
 
 function applyGeoOffset() {
-  geoGroup.position.set(geoAuto.x + params.geoX, 0, geoAuto.z + params.geoZ);
+  geoGroup.rotation.y = geoRot;
+  const c = Math.cos(geoRot), s = Math.sin(geoRot);
+  const rx = geoCross.x * c + geoCross.z * s, rz = -geoCross.x * s + geoCross.z * c;
+  geoGroup.position.set(-rx + params.geoX, 0, -rz + params.geoZ);
 }
 
 function clearCorridor(x, z) {
@@ -437,8 +499,9 @@ async function loadBuildings(atLat, atLon) {
       const pts = el.geometry.map(g => lonLatToLocal(g.lon, g.lat));
       const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
       const cz = pts.reduce((s, p) => s + p.z, 0) / pts.length;
-      // test in world coords (geoGroup carries the auto-alignment shift)
-      if (!clearCorridor(cx + geoAuto.x, cz + geoAuto.z)) continue;
+      // test in world coords (geoGroup carries the auto-alignment shift + rotation)
+      const w = geoToWorld(cx, cz);
+      if (!clearCorridor(w.x, w.z)) continue;
       const levels = parseFloat(el.tags && el.tags['building:levels']) || 1;
       addEnvelope(pts, 2.9 * levels + 0.4);
       count++;
@@ -453,13 +516,20 @@ async function loadBuildings(atLat, atLon) {
 
 /* ---- georeference the model to the real crossing via OSM ---- */
 
-function segBearingDeg(a, b) {
+function rawBearing(a, b) {
   const dLat = b.lat - a.lat;
   const dLon = (b.lon - a.lon) * Math.cos((a.lat + b.lat) / 2 * DEG);
-  let deg = Math.atan2(dLon, dLat) / DEG;          // 0 = due north, +ve toward east
-  if (deg > 90) deg -= 180;
-  if (deg < -90) deg += 180;
-  return deg;
+  return Math.atan2(dLon, dLat) / DEG;             // 0 = due north, +ve toward east
+}
+
+function nearestSegBearing(ways, to) {
+  let best = null, bestDist = Infinity;
+  for (const w of ways) for (let i = 0; i + 1 < w.geometry.length; i++) {
+    const a = w.geometry[i], b = w.geometry[i + 1];
+    const dist = Math.hypot((a.lat + b.lat) / 2 - to.lat, (a.lon + b.lon) / 2 - to.lon);
+    if (dist < bestDist) { bestDist = dist; best = rawBearing(a, b); }
+  }
+  return best;
 }
 
 async function alignSite() {
@@ -469,40 +539,48 @@ way["highway"]["name"~"Curtis"](around:2500,${lat},${lon})->.cr;
 node(w.cr)["railway"="level_crossing"]->.x;
 way["railway"="rail"](around.x:150)->.rw;
 .x out;
-.rw out geom;`;
-  let useLat = lat, useLon = lon;
+.rw out geom;
+.cr out geom;`;
   try {
     const res = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(q) });
     if (!res.ok) throw new Error(res.status);
     const json = await res.json();
     const nodes = (json.elements || []).filter(e => e.type === 'node');
-    const rails = (json.elements || []).filter(e => e.type === 'way' && e.geometry);
+    const ways = (json.elements || []).filter(e => e.type === 'way' && e.geometry);
+    const railWays = ways.filter(w => w.tags && w.tags.railway);
+    const roadWays = ways.filter(w => w.tags && w.tags.highway);
     if (!nodes.length) throw new Error('crossing not found');
     // nearest crossing node to our estimate
     nodes.sort((a, b) => (Math.hypot(a.lat - lat, a.lon - lon)) - (Math.hypot(b.lat - lat, b.lon - lon)));
     const nx = nodes[0];
-    useLat = nx.lat; useLon = nx.lon;
+    site.lat = nx.lat; site.lon = nx.lon;
     const d = lonLatToLocal(nx.lon, nx.lat);
-    geoAuto.x = -d.x; geoAuto.z = -d.z;
-    applyGeoOffset();
-    // rail bearing from the geometry segment nearest the crossing
-    let best = null, bestDist = Infinity;
-    for (const w of rails) for (let i = 0; i + 1 < w.geometry.length; i++) {
-      const a = w.geometry[i], b = w.geometry[i + 1];
-      const mid = { lat: (a.lat + b.lat) / 2, lon: (a.lon + b.lon) / 2 };
-      const dist = Math.hypot(mid.lat - nx.lat, mid.lon - nx.lon);
-      if (dist < bestDist) { bestDist = dist; best = segBearingDeg(a, b); }
+    geoCross.x = d.x; geoCross.z = d.z;
+    // rotate the georeferenced ground so the real Curtis Rd alignment lies along model +X
+    let rotDeg = 0;
+    let roadB = nearestSegBearing(roadWays, nx);
+    if (roadB !== null) {
+      roadB = ((roadB % 360) + 360) % 180;         // fold to [0,180): an E–W road ≈ 90
+      rotDeg = roadB - 90;
+      geoRot = rotDeg * DEG;
     }
-    if (best !== null) setRailBearing(best);
+    applyGeoOffset();
+    // rail skew expressed in the rotated model frame
+    const railRaw = nearestSegBearing(railWays, nx);
+    if (railRaw !== null) {
+      let mb = ((railRaw - rotDeg) % 360 + 360) % 180;
+      if (mb > 90) mb -= 180;
+      setRailBearing(mb);
+    }
     buildRail();
     buildBridge();
-    siteStatus = `OSM level-crossing node (rail bearing ${(railB / DEG).toFixed(1)}°)`;
+    siteStatus = `OSM crossing pinned; imagery rotated ${rotDeg.toFixed(1)}°, rail skew ${(railB / DEG).toFixed(1)}° to road normal`;
   } catch (e) {
     siteStatus = 'approximate — fine-tune with the imagery shift sliders';
   }
   updateStats();
-  buildSatellite(useLat, useLon);
-  loadBuildings(useLat, useLon);
+  buildSatellite(site.lat, site.lon);
+  loadBuildings(site.lat, site.lon);
 }
 alignSite();
 
@@ -723,25 +801,126 @@ function archSpan(len, width, deckTopLocal) {
 
 /* ---- screens / barriers as instanced segments along the deck ---- */
 
-function throwScreenGeometry() {
-  // vertical 3.0 m then curving 1.4 m inward over the deck — DIT concept style
-  const pts = [];
-  pts.push(new THREE.Vector2(0, 0));
-  pts.push(new THREE.Vector2(0, 3.0));
-  for (let i = 1; i <= 6; i++) {
-    const a = (i / 6) * Math.PI / 2;
-    pts.push(new THREE.Vector2(-(1 - Math.cos(a)) * 1.4, 3.0 + Math.sin(a) * 1.1));
+/* throw screens per the concept renders: concrete parapet, kinked dark steel
+   blade posts, perforated corten mesh carrying the white wave motif, running
+   the full elevated length and following the road grade */
+
+const SCREEN_PROF = [        // blade profile above the parapet: {h: height, o: outward offset}
+  { h: 0.0, o: 0.00 },
+  { h: 2.0, o: 0.30 },       // lower leg leans outward
+  { h: 3.0, o: -0.12 },      // top leg folds back in over the path
+];
+const PARAPET_H = 1.1;
+
+function screenExtentRange() {
+  if (params.screenExtent === 'rail') {
+    const railHalf = 16 / Math.cos(railB) + 8;
+    return [Math.max(derived.x0, -railHalf), Math.min(derived.x1, railHalf)];
   }
-  // thin closed outline for extrusion
-  const shape = new THREE.Shape();
-  shape.moveTo(pts[0].x, pts[0].y);
-  for (const p of pts) shape.lineTo(p.x, p.y);
-  for (let i = pts.length - 1; i >= 0; i--) shape.lineTo(pts[i].x + 0.05, pts[i].y);
-  shape.closePath();
-  const geo = new THREE.ExtrudeGeometry(shape, { depth: 2.98, bevelEnabled: false });
-  // shape plane: X = inward, Y = up, extrude Z = along bridge → rotate so depth runs along +X
-  geo.rotateY(-Math.PI / 2);
-  return geo;
+  return elevatedExtent();
+}
+
+function buildThrowScreens() {
+  const g = new THREE.Group();
+  const [s0, s1] = screenExtentRange();
+  const W = derived.deckWidth;
+  const step = 2.6;
+  const n = Math.max(2, Math.round((s1 - s0) / step));
+
+  for (const side of [-1, 1]) {
+    const zEdge = side * (W / 2 - 0.10);
+
+    /* continuous perforated-mesh ribbon (so the wave motif flows along the bridge) */
+    const pos = [], uv = [], idx = [];
+    for (let i = 0; i <= n; i++) {
+      const x = s0 + (i / n) * (s1 - s0);
+      const yB = roadY(x) + PARAPET_H;
+      for (let r = 0; r < SCREEN_PROF.length; r++) {
+        pos.push(x, yB + SCREEN_PROF[r].h, zEdge + side * SCREEN_PROF[r].o);
+        uv.push(x / 36, r === 0 ? 0 : r === 1 ? 0.68 : 1);
+      }
+      if (i > 0) {
+        const a = (i - 1) * 3, b = i * 3;
+        idx.push(a, b, b + 1, a, b + 1, a + 1, a + 1, b + 1, b + 2, a + 1, b + 2, a + 2);
+      }
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    geo.setIndex(idx);
+    geo.computeVertexNormals();
+    g.add(new THREE.Mesh(geo, MAT.screen));
+
+    /* kinked blade posts, two legs each */
+    const nP = Math.floor((s1 - s0) / step) + 1;
+    const lowDz = SCREEN_PROF[1].o, lowDy = SCREEN_PROF[1].h;
+    const upDz = SCREEN_PROF[2].o - SCREEN_PROF[1].o, upDy = SCREEN_PROF[2].h - SCREEN_PROF[1].h;
+    const lowLen = Math.hypot(lowDy, lowDz), upLen = Math.hypot(upDy, upDz);
+    const lowGeo = new THREE.BoxGeometry(0.13, lowLen, 0.08);
+    lowGeo.translate(0, lowLen / 2, 0);
+    lowGeo.rotateX(Math.atan2(side * lowDz, lowDy));
+    const upGeo = new THREE.BoxGeometry(0.13, upLen, 0.08);
+    upGeo.translate(0, upLen / 2, 0);
+    upGeo.rotateX(Math.atan2(side * upDz, upDy));
+    upGeo.translate(0, lowDy, side * lowDz);
+    const m4 = new THREE.Matrix4();
+    for (const legGeo of [lowGeo, upGeo]) {
+      const inst = new THREE.InstancedMesh(legGeo, MAT.screenFrame, nP);
+      for (let i = 0; i < nP; i++) {
+        const x = Math.min(s0 + i * step, s1);
+        m4.makeTranslation(x, roadY(x) + PARAPET_H, zEdge);
+        inst.setMatrixAt(i, m4);
+      }
+      inst.castShadow = true;
+      g.add(inst);
+    }
+
+    /* concrete parapet beneath the screen */
+    g.add(buildParapetRun(zEdge, s0, s1));
+  }
+  return g;
+}
+
+function buildParapetRun(zOff, s0, s1) {
+  const segLen = 4;
+  const n = Math.max(1, Math.ceil((s1 - s0) / segLen));
+  const s = new THREE.Shape();
+  s.moveTo(-0.20, 0); s.lineTo(0.20, 0); s.lineTo(0.15, PARAPET_H); s.lineTo(-0.15, PARAPET_H);
+  s.closePath();
+  const geo = new THREE.ExtrudeGeometry(s, { depth: segLen * 1.02, bevelEnabled: false });
+  geo.rotateY(Math.PI / 2);
+  const inst = new THREE.InstancedMesh(geo, MAT.barrier, n);
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion();
+  for (let i = 0; i < n; i++) {
+    const x = s0 + i * segLen;
+    q.setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.atan2(roadY(x + segLen) - roadY(x), segLen));
+    m4.compose(new THREE.Vector3(x, roadY(x) + 0.02, zOff), q, new THREE.Vector3(1, 1, 1));
+    inst.setMatrixAt(i, m4);
+  }
+  inst.castShadow = true;
+  return inst;
+}
+
+function buildStreetLights() {
+  const g = new THREE.Group();
+  const [e0, e1] = elevatedExtent();
+  const RW = derived.roadWidth;
+  const headMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, emissive: 0xfff7d0, emissiveIntensity: 0.5 });
+  let alt = 1;
+  for (let x = e0 + 12; x <= e1 - 8; x += 42) {
+    const side = alt; alt = -alt;
+    const y = roadY(x);
+    const zP = side * (RW / 2 + 0.75);
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.1, 9, 8), MAT.mast);
+    pole.position.set(x, y + 4.5, zP);
+    pole.castShadow = true;
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 2.4), MAT.mast);
+    arm.position.set(x, y + 8.9, zP - side * 1.2);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.12, 0.8), headMat);
+    head.position.set(x, y + 8.82, zP - side * 2.2);
+    g.add(pole, arm, head);
+  }
+  return g;
 }
 
 function barrierGeometry(segLen) {
@@ -815,50 +994,36 @@ function buildBridge() {
     for (const side of [-1, 1]) bridgeGroup.add(buildBarrierRun(side * (RW / 2 + 0.275)));
   }
 
-  /* outer pedestrian balustrade */
+  /* outer pedestrian balustrade (omitted where the screens + parapet stand) */
   if (params.balustrade) {
-    for (const side of [-1, 1]) bridgeGroup.add(buildBalustrade(side * (W / 2 - 0.12)));
+    const excl = params.throwScreens ? screenExtentRange() : null;
+    for (const side of [-1, 1]) bridgeGroup.add(buildBalustrade(side * (W / 2 - 0.12), excl));
   }
 
-  /* throw screens */
-  if (params.throwScreens) {
-    let s0, s1;
-    if (params.screenExtent === 'full') { s0 = derived.x0; s1 = derived.x1; }
-    else {
-      const railHalf = 16 / Math.cos(railB) + 8;   // rail corridor footprint along the road + margin
-      s0 = Math.max(derived.x0, -railHalf); s1 = Math.min(derived.x1, railHalf);
-    }
-    const geo = throwScreenGeometry();
-    for (const side of [-1, 1]) {
-      const count = Math.max(1, Math.floor((s1 - s0) / 3));
-      const inst = new THREE.InstancedMesh(geo, MAT.screen, count);
-      const m4 = new THREE.Matrix4();
-      const rot = new THREE.Matrix4().makeRotationY(side < 0 ? Math.PI : 0);
-      for (let i = 0; i < count; i++) {
-        m4.makeTranslation(s0 + i * 3 + (side < 0 ? 0 : 3), deckTop, side * (W / 2 - 0.10));
-        m4.multiply(rot);
-        inst.setMatrixAt(i, m4);
-      }
-      bridgeGroup.add(inst);
-      // top + mid frame rails
-      for (const fy of [3.0, 4.1]) {
-        const fr = new THREE.Mesh(new THREE.BoxGeometry(s1 - s0, 0.09, 0.09), MAT.screenFrame);
-        const inset = fy > 3.5 ? 1.4 : 0;
-        fr.position.set((s0 + s1) / 2, deckTop + fy, side * (W / 2 - 0.10 - inset));
-        bridgeGroup.add(fr);
-      }
-    }
-  }
+  /* throw screens — full elevated length per the concept renders */
+  if (params.throwScreens) bridgeGroup.add(buildThrowScreens());
 
-  /* Charlotte St ↔ Alawoona Rd local connection passing under the overpass */
+  /* street lighting along the structure */
+  bridgeGroup.add(buildStreetLights());
+
+  /* project road upgrades at ground level (per the proposed-treatments plan) */
   {
-    const link = new THREE.Mesh(new THREE.BoxGeometry(7, 0.1, 360), MAT.asphalt.clone());
-    link.material.map = null; link.material.color = new THREE.Color(0x44474a);
-    const off = 26;  // east of rail corridor, parallel-ish to it
-    link.position.copy(railPoint(0, off)); link.position.y = 0.02;
-    link.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), railDir);
-    link.receiveShadow = true;
-    bridgeGroup.add(link);
+    const qRail = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), railDir);
+    // Charlotte Street ↔ Alawoona Road connection under the overpass (east of rail)
+    const east = new THREE.Mesh(new THREE.BoxGeometry(7, 0.1, 520), MAT.linkRoad);
+    east.position.copy(railPoint(0, 26)); east.position.y = 0.02;
+    east.quaternion.copy(qRail);
+    // new link road ↔ Palina Court connection under the overpass (west of rail)
+    const west = new THREE.Mesh(new THREE.BoxGeometry(7, 0.1, 500), MAT.linkRoad);
+    west.position.copy(railPoint(0, -22)); west.position.y = 0.02;
+    west.quaternion.copy(qRail);
+    // new link road north of Curtis Road serving Playford Alive East
+    const link = new THREE.Mesh(new THREE.BoxGeometry(330, 0.1, 7), MAT.linkRoad);
+    link.position.set(-175, 0.02, -120);
+    // Admiral Parade / Playford Alive East connection
+    const adm = new THREE.Mesh(new THREE.BoxGeometry(7, 0.1, 310), MAT.linkRoad);
+    adm.position.set(-340, 0.02, -145);
+    for (const m of [east, west, link, adm]) { m.receiveShadow = true; bridgeGroup.add(m); }
   }
 
   updateStats();
@@ -877,11 +1042,15 @@ function buildPier(px, capTopY, W) {
   g.add(cap);
   const colH = capTopY - capH;
   const nCols = W > 18 ? 3 : 2;
+  // terracotta blade columns with the white sweep artwork, per the renders
+  const colMat = clash ? mat : MAT.pier;
   for (let i = 0; i < nCols; i++) {
     const t = nCols === 1 ? 0 : -0.5 + i / (nCols - 1);
-    const col = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.85, colH, 18), mat);
+    const col = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.05, colH, 20), colMat);
+    col.scale.x = 0.62;                       // elongated oval section, long axis along the rail
     const local = new THREE.Vector3(0, 0, t * (W - 4)).applyAxisAngle(new THREE.Vector3(0, 1, 0), railB);
     col.position.set(px + local.x, colH / 2, local.z);
+    col.rotation.y = railB;
     col.castShadow = true;
     g.add(col);
   }
@@ -978,22 +1147,27 @@ function buildBarrierRun(zOff) {
   return inst;
 }
 
-function buildBalustrade(zOff) {
+function buildBalustrade(zOff, excl) {
   const g = new THREE.Group();
   const [e0, e1] = elevatedExtent();
+  const inExcl = x => excl && x > excl[0] - 1 && x < excl[1] + 1;
+  const xs = [];
+  for (let x = e0; x <= e1; x += 2.5) if (!inExcl(x)) xs.push(x);
+  if (!xs.length) return g;
   const postGeo = new THREE.BoxGeometry(0.07, 1.3, 0.07);
-  const nP = Math.floor((e1 - e0) / 2.5);
-  const posts = new THREE.InstancedMesh(postGeo, MAT.screenFrame, nP);
+  const posts = new THREE.InstancedMesh(postGeo, MAT.screenFrame, xs.length);
   const m4 = new THREE.Matrix4();
-  for (let i = 0; i < nP; i++) {
-    const x = e0 + i * 2.5;
+  xs.forEach((x, i) => {
     m4.makeTranslation(x, roadY(x) + 0.65, zOff);
     posts.setMatrixAt(i, m4);
-  }
+  });
   g.add(posts);
-  for (const ry of [0.7, 1.25]) {
+  const ranges = excl
+    ? [[e0, Math.max(e0, excl[0])], [Math.min(e1, excl[1]), e1]].filter(r => r[1] - r[0] > 4)
+    : [[e0, e1]];
+  for (const ry of [0.7, 1.25]) for (const [r0, r1] of ranges) {
     const pts = [];
-    for (let x = e0; x <= e1; x += 4) pts.push(new THREE.Vector3(x, roadY(x) + ry, zOff));
+    for (let x = r0; x <= r1; x += 4) pts.push(new THREE.Vector3(x, roadY(x) + ry, zOff));
     g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
                          new THREE.LineBasicMaterial({ color: 0x37424a })));
   }
@@ -1108,6 +1282,15 @@ $('balustrade').addEventListener('change', e => { params.balustrade = e.target.c
 $('showSat').addEventListener('change', e => {
   params.showSat = e.target.checked;
   geoGroup.traverse(o => { if (o.userData.isSatTile) o.visible = params.showSat; });
+});
+$('imgSource').addEventListener('change', e => {
+  params.imgSource = e.target.value;
+  $('customUrlRow').style.display = params.imgSource === 'custom' ? 'flex' : 'none';
+  if (params.imgSource !== 'custom' || params.customUrl) buildSatellite(site.lat, site.lon);
+});
+$('customUrl').addEventListener('change', e => {
+  params.customUrl = e.target.value.trim();
+  if (params.imgSource === 'custom' && params.customUrl) buildSatellite(site.lat, site.lon);
 });
 $('showBuildings').addEventListener('change', e => { buildingGroup.visible = e.target.checked; });
 $('bldgOpacity').addEventListener('input', e => {
