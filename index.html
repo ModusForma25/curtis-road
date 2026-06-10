@@ -172,10 +172,13 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
    ================================================================ */
 
 const CONFIG = {
-  center: { lat: -34.6666, lon: 138.6976 },  // Curtis Rd × Gawler line, Munno Para
-  railBearingDeg: 22,                        // Gawler line bearing (° east of north) here
-  tileZoom: 17,
-  tileGrid: 7,                               // 7×7 tiles ≈ 1.75 km square at z17
+  // Curtis Rd × Gawler line crossing, between Munno Para (NE) and Smithfield (S).
+  // Fallback estimate only — on load the model queries OSM for the actual
+  // railway=level_crossing node on Curtis Road and snaps imagery + rail to it.
+  center: { lat: -34.6753, lon: 138.6877 },
+  railBearingDeg: 12,                        // fallback Gawler line bearing (° east of north)
+  tileZoom: 18,
+  tileGrid: 11,                              // 11×11 tiles ≈ 1.4 km square at z18
   groundExtent: 1000,
   roadHalfLength: 470,
 };
@@ -237,8 +240,12 @@ scene.add(sun);
 /* ---------------- shared geometry helpers ---------------- */
 
 const DEG = Math.PI / 180;
-const railB = CONFIG.railBearingDeg * DEG;
+let railB = CONFIG.railBearingDeg * DEG;
 const railDir = new THREE.Vector3(Math.sin(railB), 0, -Math.cos(railB)); // toward Gawler (NNE)
+function setRailBearing(deg) {
+  railB = deg * DEG;
+  railDir.set(Math.sin(railB), 0, -Math.cos(railB));
+}
 const smooth = t => t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t);
 
 function makeCanvasTex(draw, w = 256, h = 256, repX = 1, repY = 1) {
@@ -329,10 +336,10 @@ function lonLatToLocal(lon, lat) {
   return { x: (m.x - centerMerc.x) * groundScale, z: -(m.y - centerMerc.y) * groundScale };
 }
 
-function buildSatellite() {
+function buildSatellite(atLat, atLon) {
   const z = CONFIG.tileZoom, n = 2 ** z;
-  const cx = Math.floor((CONFIG.center.lon + 180) / 360 * n);
-  const latR = CONFIG.center.lat * DEG;
+  const cx = Math.floor((atLon + 180) / 360 * n);
+  const latR = atLat * DEG;
   const cy = Math.floor((1 - Math.log(Math.tan(latR) + 1 / Math.cos(latR)) / Math.PI) / 2 * n);
   const world = 2 * Math.PI * R_EARTH;
   const tileMerc = world / n;
@@ -363,7 +370,6 @@ function buildSatellite() {
     );
   }
 }
-buildSatellite();
 
 // neutral apron under/past the tiles
 {
@@ -381,6 +387,12 @@ buildSatellite();
 const buildingGroup = new THREE.Group();
 geoGroup.add(buildingGroup);
 let buildingsSource = 'loading…';
+let siteStatus = 'aligning to OSM level-crossing node…';
+const geoAuto = { x: 0, z: 0 };   // automatic georeference correction (OSM crossing → origin)
+
+function applyGeoOffset() {
+  geoGroup.position.set(geoAuto.x + params.geoX, 0, geoAuto.z + params.geoZ);
+}
 
 function clearCorridor(x, z) {
   // keep envelopes off the works: Curtis Rd corridor + rail corridor
@@ -413,8 +425,8 @@ function proceduralBuildings() {
   updateStats();
 }
 
-async function loadBuildings() {
-  const q = `[out:json][timeout:25];(way["building"](around:750,${CONFIG.center.lat},${CONFIG.center.lon}););out geom;`;
+async function loadBuildings(atLat, atLon) {
+  const q = `[out:json][timeout:25];(way["building"](around:750,${atLat},${atLon}););out geom;`;
   try {
     const res = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(q) });
     if (!res.ok) throw new Error(res.status);
@@ -425,7 +437,8 @@ async function loadBuildings() {
       const pts = el.geometry.map(g => lonLatToLocal(g.lon, g.lat));
       const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
       const cz = pts.reduce((s, p) => s + p.z, 0) / pts.length;
-      if (!clearCorridor(cx, cz)) continue;
+      // test in world coords (geoGroup carries the auto-alignment shift)
+      if (!clearCorridor(cx + geoAuto.x, cz + geoAuto.z)) continue;
       const levels = parseFloat(el.tags && el.tags['building:levels']) || 1;
       addEnvelope(pts, 2.9 * levels + 0.4);
       count++;
@@ -437,7 +450,61 @@ async function loadBuildings() {
     proceduralBuildings();
   }
 }
-loadBuildings();
+
+/* ---- georeference the model to the real crossing via OSM ---- */
+
+function segBearingDeg(a, b) {
+  const dLat = b.lat - a.lat;
+  const dLon = (b.lon - a.lon) * Math.cos((a.lat + b.lat) / 2 * DEG);
+  let deg = Math.atan2(dLon, dLat) / DEG;          // 0 = due north, +ve toward east
+  if (deg > 90) deg -= 180;
+  if (deg < -90) deg += 180;
+  return deg;
+}
+
+async function alignSite() {
+  const { lat, lon } = CONFIG.center;
+  const q = `[out:json][timeout:25];
+way["highway"]["name"~"Curtis"](around:2500,${lat},${lon})->.cr;
+node(w.cr)["railway"="level_crossing"]->.x;
+way["railway"="rail"](around.x:150)->.rw;
+.x out;
+.rw out geom;`;
+  let useLat = lat, useLon = lon;
+  try {
+    const res = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(q) });
+    if (!res.ok) throw new Error(res.status);
+    const json = await res.json();
+    const nodes = (json.elements || []).filter(e => e.type === 'node');
+    const rails = (json.elements || []).filter(e => e.type === 'way' && e.geometry);
+    if (!nodes.length) throw new Error('crossing not found');
+    // nearest crossing node to our estimate
+    nodes.sort((a, b) => (Math.hypot(a.lat - lat, a.lon - lon)) - (Math.hypot(b.lat - lat, b.lon - lon)));
+    const nx = nodes[0];
+    useLat = nx.lat; useLon = nx.lon;
+    const d = lonLatToLocal(nx.lon, nx.lat);
+    geoAuto.x = -d.x; geoAuto.z = -d.z;
+    applyGeoOffset();
+    // rail bearing from the geometry segment nearest the crossing
+    let best = null, bestDist = Infinity;
+    for (const w of rails) for (let i = 0; i + 1 < w.geometry.length; i++) {
+      const a = w.geometry[i], b = w.geometry[i + 1];
+      const mid = { lat: (a.lat + b.lat) / 2, lon: (a.lon + b.lon) / 2 };
+      const dist = Math.hypot(mid.lat - nx.lat, mid.lon - nx.lon);
+      if (dist < bestDist) { bestDist = dist; best = segBearingDeg(a, b); }
+    }
+    if (best !== null) setRailBearing(best);
+    buildRail();
+    buildBridge();
+    siteStatus = `OSM level-crossing node (rail bearing ${(railB / DEG).toFixed(1)}°)`;
+  } catch (e) {
+    siteStatus = 'approximate — fine-tune with the imagery shift sliders';
+  }
+  updateStats();
+  buildSatellite(useLat, useLon);
+  loadBuildings(useLat, useLon);
+}
+alignSite();
 
 /* ---------------- rail corridor (Gawler line, electrified, 2 tracks) ---------------- */
 
@@ -452,6 +519,7 @@ function railPoint(s, offset = 0) {
 }
 
 function buildRail() {
+  disposeGroup(railGroup);
   const LEN = 1300, half = LEN / 2;
   // ballast bed
   const ballast = new THREE.Mesh(new THREE.BoxGeometry(11, 0.5, LEN), MAT.ballast);
@@ -496,17 +564,17 @@ function buildRail() {
     bg.add(new THREE.Line(g, new THREE.LineBasicMaterial({ color: 0x222222 })));
   }
 
-  // Munno Para station — side platforms just south of Curtis Road
+  // Smithfield station — ~600 m south of the crossing (toward the city)
   for (const side of [-1, 1]) {
     const plat = new THREE.Mesh(new THREE.BoxGeometry(3.4, 1.0, 115), MAT.platform);
-    plat.position.set(side * 5.6, 0.5, -(48 + 115 / 2));
+    plat.position.set(side * 5.6, 0.5, -620);
     plat.castShadow = true; plat.receiveShadow = true;
     bg.add(plat);
     const shelter = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.18, 14), new THREE.MeshStandardMaterial({ color: 0xb8483c, roughness: 0.6 }));
-    shelter.position.set(side * 5.6, 3.4, -100);
+    shelter.position.set(side * 5.6, 3.4, -612);
     shelter.castShadow = true;
     bg.add(shelter);
-    for (const ps of [-106, -94]) {
+    for (const ps of [-618, -606]) {
       const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 2.4, 6), MAT.mast);
       post.position.set(side * 5.6, 2.2, ps);
       bg.add(post);
@@ -1049,8 +1117,8 @@ $('bldgOpacity').addEventListener('input', e => {
 });
 $('showTrain').addEventListener('change', e => { params.showTrain = e.target.checked; train.visible = e.target.checked; });
 $('showCars').addEventListener('change', e => { params.showCars = e.target.checked; trafficGroup.visible = e.target.checked; });
-$('geoX').addEventListener('input', e => { params.geoX = +e.target.value; $('geoXVal').textContent = e.target.value + ' m'; geoGroup.position.x = params.geoX; });
-$('geoZ').addEventListener('input', e => { params.geoZ = +e.target.value; $('geoZVal').textContent = e.target.value + ' m'; geoGroup.position.z = params.geoZ; });
+$('geoX').addEventListener('input', e => { params.geoX = +e.target.value; $('geoXVal').textContent = e.target.value + ' m'; applyGeoOffset(); });
+$('geoZ').addEventListener('input', e => { params.geoZ = +e.target.value; $('geoZVal').textContent = e.target.value + ' m'; applyGeoOffset(); });
 
 const typeNames = { 'super-t': 'Precast concrete Super-T girders', 'steel': 'Steel plate girders, composite deck', 'arch': 'Steel network arch (through type)' };
 function updateStats() {
@@ -1061,7 +1129,8 @@ function updateStats() {
     `Bridge length <b>${derived.totalLen} m</b> · deck level <b>${derived.deckTopY.toFixed(1)} m</b> above rail · ` +
     `approach ramps <b>${Math.round(derived.rampLen)} m</b> each at 5 %<br>` +
     `Deck width <b>${derived.deckWidth.toFixed(1)} m</b> (${params.lanesPerDir} lane${params.lanesPerDir > 1 ? 's' : ''}/dir + 3.0 m shared-use paths both sides)<br>` +
-    `Site context: ${buildingsSource}` +
+    `Site context: ${buildingsSource}<br>` +
+    `Site alignment: ${siteStatus}` +
     `<div id="warn" style="display:${derived.clash ? 'block' : 'none'}">⚠ A pier falls inside the rail corridor clear zone — lengthen the adjacent spans.</div>`;
 }
 
