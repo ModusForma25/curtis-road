@@ -137,6 +137,38 @@
   </details>
 
   <details open>
+    <summary>Sun &amp; shadows (Adelaide)</summary>
+    <div class="body">
+      <div class="row"><label>Time of day</label>
+        <input type="range" id="sunTime" min="6" max="20" step="0.25" value="12"><span class="val" id="sunTimeVal">12:00</span></div>
+      <div class="row"><label>Season</label>
+        <select id="season">
+          <option value="172" selected>Winter solstice (21 Jun)</option>
+          <option value="80">Equinox (21 Mar)</option>
+          <option value="355">Summer solstice (21 Dec)</option>
+        </select></div>
+    </div>
+  </details>
+
+  <details>
+    <summary>Traffic noise (indicative)</summary>
+    <div class="body">
+      <div class="row check"><input type="checkbox" id="noiseToggle"><label for="noiseToggle">Noise contours — screens/parapet act as barrier</label></div>
+      <div class="row"><label>Source LAeq @10 m</label>
+        <input type="range" id="noiseLevel" min="60" max="75" step="1" value="68"><span class="val" id="noiseLevelVal">68 dB</span></div>
+      <div id="noiseLegend" style="display:none; font-size:10.5px; color:var(--muted); margin: 4px 0 2px;">
+        <span style="color:#46a046">■</span> &lt;50 &nbsp;
+        <span style="color:#8cbe3c">■</span> 50–55 &nbsp;
+        <span style="color:#f0d246">■</span> 55–60 &nbsp;
+        <span style="color:#eb8c32">■</span> 60–65 &nbsp;
+        <span style="color:#d23c32">■</span> &gt;65 dB(A)<br>
+        Simplified line-source + Maekawa barrier model at 1.5 m receivers.
+        Indicative only — not a CoRTN/ISO 9613 assessment.
+      </div>
+    </div>
+  </details>
+
+  <details open>
     <summary>Site context</summary>
     <div class="body">
       <div class="row check"><input type="checkbox" id="showSat" checked><label for="showSat">Satellite imagery</label></div>
@@ -223,6 +255,10 @@ const params = {
   showTrain: true,
   showCars: true,
   geoX: 0, geoZ: 0,
+  sunTime: 12,
+  seasonDoy: 172,            // 21 June — worst-case winter shadows
+  noise: false,
+  noiseLevel: 68,            // LAeq at 10 m from the carriageway
 };
 
 /* ---------------- renderer / scene / camera ---------------- */
@@ -249,7 +285,8 @@ controls.maxPolarAngle = Math.PI * 0.495;
 controls.maxDistance = 1800;
 controls.enableDamping = true;
 
-scene.add(new THREE.HemisphereLight(0xcfe6ff, 0x6a7a55, 0.85));
+const hemi = new THREE.HemisphereLight(0xcfe6ff, 0x6a7a55, 0.85);
+scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xfff2dc, 2.0);
 sun.position.set(-320, 420, -180);
 sun.castShadow = true;
@@ -645,6 +682,38 @@ function buildSatellite(atLat, atLon) {
   scene.add(apron);
 }
 
+/* ---------------- Adelaide sun position (for overshadowing checks) ---------------- */
+
+function updateSun() {
+  const lat = site.lat * DEG;
+  const doy = params.seasonDoy;
+  const decl = -23.44 * DEG * Math.cos((2 * Math.PI / 365) * (doy + 10));
+  // local clock time → approximate solar time (ACST zone meridian 142.5°E)
+  const solarT = params.sunTime + (site.lon - 142.5) / 15;
+  const H = (solarT - 12) * 15 * DEG;                 // hour angle
+  const sinEl = Math.sin(lat) * Math.sin(decl) + Math.cos(lat) * Math.cos(decl) * Math.cos(H);
+  const el = Math.asin(THREE.MathUtils.clamp(sinEl, -1, 1));
+  const cosEl = Math.cos(el) || 1e-6;
+  const sinAz = -Math.cos(decl) * Math.sin(H) / cosEl;
+  const cosAz = (Math.sin(decl) - sinEl * Math.sin(lat)) / (cosEl * Math.cos(lat));
+  const az = Math.atan2(sinAz, cosAz);                // from true north, +ve eastward
+
+  // direction in geo frame (x = east, −z = north), rotated into the model frame
+  const gx = Math.sin(az) * cosEl, gz = -Math.cos(az) * cosEl, gy = Math.max(sinEl, -0.05);
+  const c = Math.cos(geoRot), s = Math.sin(geoRot);
+  sun.position.set((gx * c + gz * s) * 700, gy * 700, (-gx * s + gz * c) * 700);
+
+  // daylight / twilight feel
+  const day = THREE.MathUtils.clamp(sinEl * 4, 0, 1);
+  const warm = THREE.MathUtils.clamp(1 - sinEl * 2.2, 0, 1);
+  sun.intensity = 0.05 + 2.0 * day;
+  sun.color.setRGB(1, 0.95 - 0.25 * warm, 0.86 - 0.45 * warm);
+  hemi.intensity = 0.15 + 0.7 * day;
+  const sky = new THREE.Color().setRGB(0.61 * day + 0.05, 0.78 * day + 0.06, 0.91 * day + 0.10);
+  scene.background = sky;
+  scene.fog.color = sky;
+}
+
 /* ---------------- Overpass helper (rate-limit aware) ---------------- */
 
 async function overpass(q, tries = 2) {
@@ -804,6 +873,7 @@ way["railway"="rail"](around.x:900)->.rw;
       if (pathSane(p, railDir.x, railDir.z, 550)) { railPath = p; railAligned = railCurved = true; }
     }
 
+    updateSun();           // geoRot changed — re-aim the sun relative to true north
     buildRail();
     buildBridge();
     buildCars();
@@ -1446,6 +1516,7 @@ function buildBridge() {
   /* street lighting along the structure */
   bridgeGroup.add(buildStreetLights());
 
+  if (params.noise) buildNoiseMap();
   updateStats();
 }
 
@@ -1514,6 +1585,26 @@ function streetWidth(tags) {
 }
 
 let crossingRoadName = null;
+let streetsStatus = 'loading…';
+
+function makeStreetLabel(text) {
+  const c = document.createElement('canvas');
+  const g = c.getContext('2d');
+  g.font = '600 30px "Segoe UI", Roboto, sans-serif';
+  const tw = Math.ceil(g.measureText(text).width);
+  c.width = tw + 26; c.height = 46;
+  g.font = '600 30px "Segoe UI", Roboto, sans-serif';
+  g.fillStyle = 'rgba(12,17,22,0.62)';
+  g.beginPath(); g.roundRect(0, 0, c.width, c.height, 10); g.fill();
+  g.fillStyle = '#f2f6fa';
+  g.fillText(text, 13, 33);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
+  const h = 7;
+  sp.scale.set(h * c.width / c.height, h, 1);
+  return sp;
+}
 
 async function loadStreets(atLat, atLon) {
   const q = `[out:json][timeout:25];way["highway"](around:650,${atLat},${atLon});out geom;`;
@@ -1522,6 +1613,8 @@ async function loadStreets(atLat, atLon) {
     disposeGroup(streetsGroup);
     const named = {};
     const nameKeys = { charlotte: /charlotte/i, alawoona: /alawoona/i, palina: /palina/i, admiral: /admiral/i };
+    const labelBest = new Map();    // street name → way nearest the crossing
+    let count = 0;
     for (const el of json.elements || []) {
       if (el.type !== 'way' || !el.geometry || el.geometry.length < 2 || !el.tags) continue;
       const nm = el.tags.name || '';
@@ -1535,15 +1628,116 @@ async function loadStreets(atLat, atLon) {
       }
       const w = streetWidth(el.tags);
       if (!w) continue;
+      // one label per street name, on the way passing nearest the crossing
+      if (nm) {
+        const mid = ptsGeo[Math.floor(ptsGeo.length / 2)];
+        const dm = geoToModel(mid.x, mid.z);
+        const dd = Math.hypot(dm.x, dm.z);
+        const prev = labelBest.get(nm);
+        if (!prev || dd < prev.dd) labelBest.set(nm, { mid, dd });
+      }
       if (crossingRoadName && nm === crossingRoadName) continue;   // the model draws Curtis Rd itself
       const p = makePath(ptsGeo);
       streetsGroup.add(pathRibbon(p, p.sMin, p.sMax, w, 0, () => 0.015, MAT.linkRoad, 8));
+      count++;
+    }
+    for (const [nm, info] of labelBest) {
+      if (info.dd > 480) continue;
+      const sp = makeStreetLabel(nm);
+      sp.position.set(info.mid.x, 8, info.mid.z);
+      streetsGroup.add(sp);
     }
     streetsGroup.visible = params.showStreets;
     buildConnectors(named);
+    streetsStatus = `${count} OSM streets, ${labelBest.size} labels`;
   } catch (e) {
     buildConnectors(null);
+    streetsStatus = 'unavailable (' + (e.message || 'offline') + ')';
   }
+  updateStats();
+}
+
+/* ---------------- indicative traffic noise contours ----------------
+   Simplified screening model, NOT a CoRTN / ISO 9613-2 assessment:
+   - the carriageway is a line source: L(d) = L₀(10 m) − 10·log₁₀(d/10)
+   - the throw screen / parapet edge attenuates by Maekawa's approximation
+     IL = 10·log₁₀(3 + 20N), N = 2δ/λ at 550 Hz, capped at 20 dB
+   - receivers at 1.5 m; ground/façade reflections and building shielding
+     are ignored. Useful for comparing screen options, not for compliance. */
+
+const noiseGroup = new THREE.Group();
+scene.add(noiseGroup);
+
+function noiseColor(db) {
+  if (db < 50) return [0.27, 0.63, 0.27];
+  if (db < 55) return [0.55, 0.75, 0.24];
+  if (db < 60) return [0.94, 0.82, 0.27];
+  if (db < 65) return [0.92, 0.55, 0.20];
+  return [0.82, 0.24, 0.20];
+}
+
+function buildNoiseMap() {
+  disposeGroup(noiseGroup);
+  if (!params.noise) return;
+
+  // sample the elevated + approach source line
+  const src = [];
+  for (let s = -derived.roadEnd; s <= derived.roadEnd; s += 8) {
+    const f = roadFrame(s);
+    src.push({ x: f.x, z: f.z, y: roadY(s) + 0.7, elevated: roadY(s) > 1 });
+  }
+  const W2 = derived.deckWidth / 2;
+  const screenTop = params.throwScreens ? PARAPET_H + 3.0 : (params.trafficBarriers ? 0.9 : 0);
+  const [scr0, scr1] = params.throwScreens ? screenExtentRange() : [0, 0];
+  const lambda = 0.63, recH = 1.5;
+
+  const EXT = 420, STEP = 8, N = Math.floor(2 * EXT / STEP);
+  const geo = new THREE.PlaneGeometry(2 * EXT, 2 * EXT, N, N);
+  geo.rotateX(-Math.PI / 2);
+  const posA = geo.attributes.position;
+  const colors = new Float32Array(posA.count * 3);
+
+  for (let vi = 0; vi < posA.count; vi++) {
+    const rx = posA.getX(vi), rz = posA.getZ(vi);
+    // nearest source sample
+    let best = null, bd = Infinity, bi = 0;
+    for (let k = 0; k < src.length; k++) {
+      const d = Math.hypot(src[k].x - rx, src[k].z - rz);
+      if (d < bd) { bd = d; best = src[k]; bi = k; }
+    }
+    const d = Math.max(bd, 2);
+    let L = params.noiseLevel - 10 * Math.log10(d / 10);
+
+    // barrier insertion loss over the deck-edge screen/parapet
+    if (best.elevated && screenTop > 0) {
+      const sOfSample = -derived.roadEnd + bi * 8;
+      const screened = !params.throwScreens || (sOfSample >= scr0 && sOfSample <= scr1);
+      if (screened) {
+        if (d <= W2 + 1) {
+          L -= 18;                                          // beneath the deck
+        } else {
+          const bY = best.y - 0.7 + screenTop;              // barrier top above deck edge
+          const sb = Math.hypot(W2, bY - best.y);
+          const br = Math.hypot(d - W2, bY - recH);
+          const sr = Math.hypot(d, best.y - recH);
+          const delta = sb + br - sr;
+          if (delta > 0) {
+            const Nf = 2 * delta / lambda;
+            L -= Math.min(20, 10 * Math.log10(3 + 20 * Nf));
+          }
+        }
+      }
+    }
+
+    const [r, g, b] = noiseColor(L);
+    colors[vi * 3] = r; colors[vi * 3 + 1] = g; colors[vi * 3 + 2] = b;
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+    vertexColors: true, transparent: true, opacity: 0.45, depthWrite: false,
+  }));
+  mesh.position.y = 0.45;
+  noiseGroup.add(mesh);
 }
 
 /* ---------------- animated traffic ---------------- */
@@ -1553,19 +1747,57 @@ scene.add(trafficGroup);
 const cars = [];
 const carColors = [0xc8453a, 0x3b6ea5, 0xd9d9d9, 0x2f3338, 0x7d9c6a, 0xe0a23f];
 
+const carBodyGeos = (() => {
+  // side-profile silhouettes extruded across the body width, lightly bevelled
+  const make = (pts, width) => {
+    const s = new THREE.Shape();
+    s.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) s.lineTo(pts[i][0], pts[i][1]);
+    s.closePath();
+    const g = new THREE.ExtrudeGeometry(s, {
+      depth: width - 0.1, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.05, bevelSegments: 1,
+    });
+    g.translate(0, 0, -(width - 0.1) / 2);
+    return g;
+  };
+  const sedan = make([
+    [-2.25, 0.35], [2.25, 0.35], [2.3, 0.62], [2.05, 0.82], [1.25, 0.88],
+    [0.78, 1.32], [-0.85, 1.36], [-1.55, 0.92], [-2.18, 0.84], [-2.3, 0.6],
+  ], 1.82);
+  const suv = make([
+    [-2.3, 0.4], [2.3, 0.4], [2.35, 0.78], [2.0, 0.95], [1.35, 1.02],
+    [0.95, 1.62], [-1.9, 1.66], [-2.25, 1.1], [-2.35, 0.78],
+  ], 1.92);
+  return [sedan, suv];
+})();
+const glassGeos = [
+  new THREE.BoxGeometry(2.0, 0.42, 1.62),   // sedan glasshouse
+  new THREE.BoxGeometry(2.6, 0.5, 1.72),    // suv glasshouse
+];
+const wheelGeo = new THREE.CylinderGeometry(0.34, 0.34, 0.24, 14);
+wheelGeo.rotateX(Math.PI / 2);
+const wheelMat = new THREE.MeshStandardMaterial({ color: 0x16181a, roughness: 0.85 });
+const glassMat = new THREE.MeshStandardMaterial({ color: 0x1c2830, roughness: 0.1, metalness: 0.55 });
+
 function buildCars() {
   disposeGroup(trafficGroup);
   cars.length = 0;
   for (let i = 0; i < 10; i++) {
     const dir = i % 2 === 0 ? 1 : -1;
-    const body = new THREE.Mesh(new THREE.BoxGeometry(4.4, 1.1, 1.9),
-      new THREE.MeshStandardMaterial({ color: carColors[i % carColors.length], roughness: 0.4, metalness: 0.3 }));
-    const cab = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.85, 1.75),
-      new THREE.MeshStandardMaterial({ color: 0x222a30, roughness: 0.2, metalness: 0.4 }));
-    cab.position.set(-0.2, 0.95, 0);
+    const kind = i % 3 === 0 ? 1 : 0;
     const car = new THREE.Group();
+    const body = new THREE.Mesh(carBodyGeos[kind],
+      new THREE.MeshStandardMaterial({ color: carColors[i % carColors.length], roughness: 0.32, metalness: 0.45 }));
     body.castShadow = true;
-    car.add(body, cab);
+    car.add(body);
+    const glass = new THREE.Mesh(glassGeos[kind], glassMat);
+    glass.position.set(kind ? -0.45 : -0.05, kind ? 1.28 : 1.02, 0);
+    car.add(glass);
+    for (const wx of [1.45, -1.45]) for (const wz of [0.85, -0.85]) {
+      const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+      wheel.position.set(wx, 0.34, wz);
+      car.add(wheel);
+    }
     const laneOff = (0.9 + (params.lanesPerDir > 1 && i % 4 < 2 ? 3.5 : 0) + 1.75 / 2) * dir * -1;
     car.userData = { s: -derived.roadEnd + i * 97, dir, lane: laneOff, speed: 13 + (i % 3) * 2.2 };
     trafficGroup.add(car);
@@ -1677,6 +1909,23 @@ $('showTrain').addEventListener('change', e => {
   trainCars.forEach(c => c.visible = e.target.checked);
 });
 $('showCars').addEventListener('change', e => { params.showCars = e.target.checked; trafficGroup.visible = e.target.checked; });
+const fmtTime = h => `${Math.floor(h)}:${String(Math.round((h % 1) * 60)).padStart(2, '0')}`;
+$('sunTime').addEventListener('input', e => {
+  params.sunTime = +e.target.value;
+  $('sunTimeVal').textContent = fmtTime(params.sunTime);
+  updateSun();
+});
+$('season').addEventListener('change', e => { params.seasonDoy = +e.target.value; updateSun(); });
+$('noiseToggle').addEventListener('change', e => {
+  params.noise = e.target.checked;
+  $('noiseLegend').style.display = params.noise ? 'block' : 'none';
+  buildNoiseMap();
+});
+$('noiseLevel').addEventListener('input', e => {
+  params.noiseLevel = +e.target.value;
+  $('noiseLevelVal').textContent = e.target.value + ' dB';
+  if (params.noise) buildNoiseMap();
+});
 $('geoX').addEventListener('input', e => { params.geoX = +e.target.value; $('geoXVal').textContent = e.target.value + ' m'; applyGeoOffset(); });
 $('geoZ').addEventListener('input', e => { params.geoZ = +e.target.value; $('geoZVal').textContent = e.target.value + ' m'; applyGeoOffset(); });
 
@@ -1693,7 +1942,7 @@ function updateStats() {
     `Bridge length <b>${derived.totalLen} m</b> · deck level <b>${derived.deckTopY.toFixed(1)} m</b> above rail · ` +
     `approach ramps <b>${Math.round(derived.rampLen)} m</b> each at 5 %<br>` +
     `Deck width <b>${derived.deckWidth.toFixed(1)} m</b> (${params.lanesPerDir} lane${params.lanesPerDir > 1 ? 's' : ''}/dir + 3.0 m shared-use paths both sides)<br>` +
-    `Site context: ${buildingsSource}<br>` +
+    `Site context: ${buildingsSource} · streets: ${streetsStatus}<br>` +
     `Site alignment: ${siteStatus}` +
     `<div id="warn" style="display:${derived.clash ? 'block' : 'none'}">⚠ A pier falls inside the rail corridor clear zone — lengthen the adjacent spans.</div>`;
 }
@@ -1716,6 +1965,7 @@ document.querySelectorAll('#viewBtns button').forEach(b => b.addEventListener('c
 
 renderSpanList();
 setTypeButtons();
+updateSun();
 buildRail();
 buildBridge();
 buildConnectors(null);
@@ -1745,7 +1995,7 @@ function animate() {
     if (u.s < -derived.roadEnd) u.s = derived.roadEnd;
     const f = roadFrame(u.s);
     const y = roadY(u.s), yAhead = roadY(u.s + 2 * u.dir);
-    car.position.set(f.x + f.nx * u.lane, y + 0.62, f.z + f.nz * u.lane);
+    car.position.set(f.x + f.nx * u.lane, y + 0.06, f.z + f.nz * u.lane);
     car.rotation.set(0, Math.atan2(-f.tz, f.tx) + (u.dir > 0 ? 0 : Math.PI), Math.atan2(yAhead - y, 2));
   }
 
