@@ -1930,6 +1930,31 @@ $('geoX').addEventListener('input', e => { params.geoX = +e.target.value; $('geo
 $('geoZ').addEventListener('input', e => { params.geoZ = +e.target.value; $('geoZVal').textContent = e.target.value + ' m'; applyGeoOffset(); });
 
 const typeNames = { 'super-t': 'Precast concrete Super-T girders', 'steel': 'Steel plate girders, composite deck', 'arch': 'Steel network arch (through type)' };
+
+/* approach earthworks quantities, integrated along the actual ramp profiles:
+   wall area = both faces of both ramps, ground to road formation level;
+   fill = between wall faces (retaining) or including 1.6H:1V side slopes
+   (embankment). Excludes abutments, pavement boxing and topsoil strip. */
+function computeQuantities() {
+  const isWall = params.approach === 'retaining';
+  const W = derived.deckWidth;
+  const step = 1;
+  let wallArea = 0, fill = 0;
+  for (const side of [-1, 1]) {
+    const sStart = side < 0 ? derived.x0 : derived.x1;
+    for (let i = 0; i < derived.rampLen + 5; i += step) {
+      const h = Math.max(0, roadY(sStart + side * (i + step / 2)) - 0.05);
+      if (h <= 0.02) continue;
+      wallArea += 2 * h * step;
+      fill += (W * h + (isWall ? 0 : 1.6 * h * h)) * step;
+    }
+  }
+  return { wallArea: isWall ? wallArea : 0, fill };
+}
+const fmtQty = v => Math.round(v / 10) * 10 >= 10000
+  ? (Math.round(v / 100) * 100).toLocaleString()
+  : (Math.round(v / 10) * 10).toLocaleString();
+
 function updateStats() {
   const s = $('stats');
   let label = typeNames[params.structure];
@@ -1942,6 +1967,12 @@ function updateStats() {
     `Bridge length <b>${derived.totalLen} m</b> · deck level <b>${derived.deckTopY.toFixed(1)} m</b> above rail · ` +
     `approach ramps <b>${Math.round(derived.rampLen)} m</b> each at 5 %<br>` +
     `Deck width <b>${derived.deckWidth.toFixed(1)} m</b> (${params.lanesPerDir} lane${params.lanesPerDir > 1 ? 's' : ''}/dir + 3.0 m shared-use paths both sides)<br>` +
+    (() => {
+      const qty = computeQuantities();
+      return params.approach === 'retaining'
+        ? `Approach earthworks: MSE walls <b>~${fmtQty(qty.wallArea)} m²</b> (4 faces) · structural fill <b>~${fmtQty(qty.fill)} m³</b><br>`
+        : `Approach earthworks: embankment fill <b>~${fmtQty(qty.fill)} m³</b> (1.6H:1V batters, no walls)<br>`;
+    })() +
     `Site context: ${buildingsSource} · streets: ${streetsStatus}<br>` +
     `Site alignment: ${siteStatus}` +
     `<div id="warn" style="display:${derived.clash ? 'block' : 'none'}">⚠ A pier falls inside the rail corridor clear zone — lengthen the adjacent spans.</div>`;
