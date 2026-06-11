@@ -24,7 +24,16 @@
     backdrop-filter: blur(6px); font-size: 13px;
   }
   #panel header { padding: 14px 16px 10px; border-bottom: 1px solid rgba(255,255,255,.08); }
-  #panel header h1 { margin: 0 0 4px; font-size: 15px; color: var(--accent); letter-spacing: .2px; }
+  #panel header .titlebar { display: flex; align-items: center; gap: 8px; }
+  #panel header h1 { margin: 0 0 4px; font-size: 15px; color: var(--accent); letter-spacing: .2px; flex: 1; }
+  #panelToggle {
+    background: none; border: 1px solid #32414f; color: var(--text); border-radius: 6px;
+    width: 28px; height: 28px; cursor: pointer; font-size: 13px; line-height: 1; flex: 0 0 28px;
+  }
+  #panelToggle:hover { border-color: var(--accent); color: var(--accent); }
+  #panel.collapsed details, #panel.collapsed #stats, #panel.collapsed header p, #panel.collapsed header .facts { display: none; }
+  #panel.collapsed { width: auto; }
+  #panel.collapsed header { border-bottom: none; padding: 10px 12px; }
   #panel header p { margin: 0; color: var(--muted); font-size: 11.5px; line-height: 1.45; }
   .facts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
   .facts span { background: rgba(255,255,255,.07); border-radius: 4px; padding: 2px 7px; font-size: 10.5px; color: #cfd9e2; }
@@ -85,7 +94,10 @@
 
 <div id="panel">
   <header>
-    <h1>Curtis Road Level Crossing Removal</h1>
+    <div class="titlebar">
+      <h1>Curtis Road Level Crossing Removal</h1>
+      <button id="panelToggle" title="Collapse / expand panel">▾</button>
+    </div>
     <p>Interactive concept model — grade-separated road overpass carrying Curtis Road over the Gawler rail line at Munno Para, SA. Based on the DIT project information and 2026 concept design release.</p>
     <div class="facts">
       <span>$250M (Aust + SA Govt)</span><span>~21,000 veh/day</span>
@@ -133,6 +145,7 @@
       <div class="row" id="customUrlRow" style="display:none"><label>Tile URL</label>
         <input type="text" id="customUrl" placeholder="https://…/{z}/{x}/{y}.jpg"></div>
       <div class="row check"><input type="checkbox" id="showBuildings" checked><label for="showBuildings">Building envelopes (OpenStreetMap footprints)</label></div>
+      <div class="row check"><input type="checkbox" id="showStreets" checked><label for="showStreets">OSM street network overlay</label></div>
       <div class="row"><label>Envelope opacity</label>
         <input type="range" id="bldgOpacity" min="0.2" max="1" step="0.05" value="0.92"><span class="val" id="bldgOpacityVal">0.92</span></div>
       <div class="row check"><input type="checkbox" id="showTrain" checked><label for="showTrain">Animate Gawler line train</label></div>
@@ -205,6 +218,7 @@ const params = {
   imgSource: 'esri',
   customUrl: '',
   showBuildings: true,
+  showStreets: true,
   bldgOpacity: 0.92,
   showTrain: true,
   showCars: true,
@@ -755,6 +769,7 @@ way["railway"="rail"](around.x:900)->.rw;
       if (dd < nwd) { nwd = dd; nearW = w; }
     }
     const roadName = nearW && nearW.tags && nearW.tags.name;
+    crossingRoadName = roadName;
     const mainRoadWays = roadName ? roadWays.filter(w => (w.tags.name || '') === roadName) : roadWays;
 
     const roadChain = stitchWays(mainRoadWays);
@@ -780,6 +795,7 @@ way["railway"="rail"](around.x:900)->.rw;
   updateStats();
   buildSatellite(site.lat, site.lon);
   loadBuildings(site.lat, site.lon);
+  loadStreets(site.lat, site.lon);
 }
 
 /* ---------------- generic ribbon along a path ---------------- */
@@ -924,23 +940,47 @@ function structDepth(type, maxSpan) {
 }
 
 function computeDerived() {
-  const total = params.spanLengths.slice(0, params.spanCount).reduce((a, b) => a + b, 0);
-  const maxSpan = Math.max(...params.spanLengths.slice(0, params.spanCount));
-  const d = structDepth(params.structure, maxSpan);
+  const spans = params.spanLengths.slice(0, params.spanCount);
+  const total = spans.reduce((a, b) => a + b, 0);
+  let x0 = -total / 2;
+
+  // network arch: a single arch span only, centred across the rail corridor,
+  // with concrete girder approach spans either side
+  derived.archIdx = -1;
+  if (params.structure === 'arch') {
+    let idx = Math.floor((spans.length - 1) / 2), c = x0;
+    for (let i = 0; i < spans.length; i++) {
+      if (0 >= c && 0 <= c + spans[i]) { idx = i; break; }
+      c += spans[i];
+    }
+    derived.archIdx = idx;
+    let mid = x0;
+    for (let i = 0; i < idx; i++) mid += spans[i];
+    mid += spans[idx] / 2;
+    x0 -= mid;                         // shift layout so the arch span midpoint sits on the rail
+  }
+
   derived.totalLen = total;
-  derived.x0 = -total / 2; derived.x1 = total / 2;
+  derived.x0 = x0; derived.x1 = x0 + total;
+  let d;
+  if (params.structure === 'arch') {
+    const approach = spans.filter((_, i) => i !== derived.archIdx);
+    d = approach.length ? THREE.MathUtils.clamp(Math.max(...approach) / 17, 1.2, 2.6) : 1.15;
+  } else {
+    d = structDepth(params.structure, Math.max(...spans));
+  }
   derived.deckTopY = params.clearance + d + 0.42;
   derived.rampLen = derived.deckTopY / 0.05;
   derived.roadWidth = params.lanesPerDir * 2 * 3.5 + 1.0;
   derived.deckWidth = derived.roadWidth + 2 * (0.45 + 3.0 + 0.4);
   derived.structD = d;
-  derived.roadEnd = Math.max(CONFIG.roadHalfLength, derived.x1 + derived.rampLen + 60);
+  derived.roadEnd = Math.max(CONFIG.roadHalfLength, Math.max(-derived.x0, derived.x1) + derived.rampLen + 60);
 }
 
 function roadY(s) {
-  const a = Math.abs(s);
-  if (a <= derived.x1) return derived.deckTopY;
-  return derived.deckTopY * smooth(1 - (a - derived.x1) / derived.rampLen);
+  if (s >= derived.x0 && s <= derived.x1) return derived.deckTopY;
+  const a = s < derived.x0 ? derived.x0 - s : s - derived.x1;
+  return derived.deckTopY * smooth(1 - a / derived.rampLen);
 }
 
 function disposeGroup(g) {
@@ -949,8 +989,7 @@ function disposeGroup(g) {
 }
 
 function elevatedExtent() {
-  const lim = derived.x1 + derived.rampLen * 0.97;
-  return [-lim, lim];
+  return [derived.x0 - derived.rampLen * 0.97, derived.x1 + derived.rampLen * 0.97];
 }
 
 /* ---- girder builders (one straight chord span, local x: 0..len, y=0 at girder TOP) ---- */
@@ -1275,9 +1314,10 @@ function buildApproach(side) {
     idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
     uv.push(0, 0, 1, 0, 1, 1, 0, 1);
   };
+  const sStart = side < 0 ? derived.x0 : derived.x1;
   const sta = [];
   for (let i = 0; i <= steps; i++) {
-    const s = side * (derived.x1 + (i / steps) * L);
+    const s = sStart + side * (i / steps) * L;
     const f = roadFrame(s);
     sta.push({ f, y: Math.max(0, roadY(s) - 0.05) });
   }
@@ -1331,11 +1371,16 @@ function buildBridge() {
     slab.castShadow = true; slab.receiveShadow = true;
     wrap.add(slab);
 
-    let spanObj;
-    if (params.structure === 'super-t')      spanObj = superTSpan(chord, W);
-    else if (params.structure === 'steel')   spanObj = steelSpan(chord, W);
-    else                                     spanObj = archSpan(chord, W, 0.42);
-    spanObj.position.y = params.structure === 'arch' ? deckTop - 0.42 : girderTopY;
+    let spanObj, isArch = false;
+    if (params.structure === 'arch') {
+      isArch = i === derived.archIdx;
+      spanObj = isArch ? archSpan(chord, W, 0.42) : superTSpan(chord, W);
+    } else if (params.structure === 'steel') {
+      spanObj = steelSpan(chord, W);
+    } else {
+      spanObj = superTSpan(chord, W);
+    }
+    spanObj.position.y = isArch ? deckTop - 0.42 : girderTopY;
     wrap.add(spanObj);
     bridgeGroup.add(wrap);
 
@@ -1345,7 +1390,8 @@ function buildBridge() {
 
   /* abutments + approaches */
   for (const side of [-1, 1]) {
-    const f = roadFrame(side * derived.x1);
+    const sEnd = side < 0 ? derived.x0 : derived.x1;
+    const f = roadFrame(sEnd);
     const ab = new THREE.Mesh(new THREE.BoxGeometry(2.2, girderTopY, W + 1.2), MAT.concrete);
     ab.position.set(f.x + f.tx * side * 1.1, girderTopY / 2, f.z + f.tz * side * 1.1);
     ab.rotation.y = Math.atan2(-f.tz, f.tx);
@@ -1378,24 +1424,106 @@ function buildBridge() {
   /* street lighting along the structure */
   bridgeGroup.add(buildStreetLights());
 
-  /* project road upgrades at ground level (per the proposed-treatments plan) */
-  {
-    // Charlotte Street ↔ Alawoona Road connection under the overpass (east of rail)
-    bridgeGroup.add(pathRibbon(railPath, -280, 280, 7, 26, () => 0.03, MAT.linkRoad, 6));
-    // new link road ↔ Palina Court connection under the overpass (west of rail)
-    bridgeGroup.add(pathRibbon(railPath, -220, 220, 7, -22, () => 0.03, MAT.linkRoad, 6));
-    // new link road north of Curtis Road serving Playford Alive East:
-    // from the Admiral Parade connection, curving east to meet the west underpass road
-    const fW = railFrame(-112);
-    bridgeGroup.add(groundRoad([
-      { x: -340, z: -18 }, { x: -312, z: -68 }, { x: -250, z: -100 },
-      { x: -150, z: -112 }, { x: fW.x + fW.nx * -22, z: fW.z + fW.nz * -22 },
-    ], 7));
-    // Admiral Parade / Playford Alive East connection, north from Curtis Road
-    bridgeGroup.add(groundRoad([{ x: -340, z: 2 }, { x: -340, z: -300 }], 7));
-  }
-
   updateStats();
+}
+
+/* ---------------- ground road network ---------------- */
+
+const contextGroup = new THREE.Group();   // new project connections (model frame)
+scene.add(contextGroup);
+const streetsGroup = new THREE.Group();   // existing OSM streets (ride with the imagery)
+geoGroup.add(streetsGroup);
+
+function railOffsetPt(s, off) {
+  const f = railFrame(s);
+  return { x: f.x + f.nx * off, z: f.z + f.nz * off };
+}
+
+/* new ground-level connections per the proposed-treatments plan. When OSM
+   street data is available the connectors snap to the real ends of
+   Charlotte St, Alawoona Rd, Palina Ct and Admiral Pde. */
+function buildConnectors(named) {
+  disposeGroup(contextGroup);
+  named = named || {};
+  const sideOff = (p, n) => {
+    const f = railFrame(n.s);
+    return (p.x - f.x) * f.nx + (p.z - f.z) * f.nz;
+  };
+
+  // east of rail: Charlotte Street ↔ Alawoona Road under the overpass
+  let e0 = -280, e1 = 280, eOff = 26;
+  if (named.charlotte && named.alawoona) {
+    const nC = railPath.nearest(named.charlotte.x, named.charlotte.z);
+    const nA = railPath.nearest(named.alawoona.x, named.alawoona.z);
+    e0 = Math.min(nC.s, nA.s); e1 = Math.max(nC.s, nA.s);
+    eOff = THREE.MathUtils.clamp((sideOff(named.charlotte, nC) + sideOff(named.alawoona, nA)) / 2, 16, 34);
+    contextGroup.add(groundRoad([named.charlotte, railOffsetPt(e0 + 8, eOff)], 6.5));
+    contextGroup.add(groundRoad([named.alawoona, railOffsetPt(e1 - 8, eOff)], 6.5));
+  }
+  contextGroup.add(pathRibbon(railPath, e0, e1, 7, eOff, () => 0.03, MAT.linkRoad, 6));
+
+  // west of rail: new link road ↔ Palina Court under the overpass
+  let w0 = -220, w1 = 190, wOff = -22;
+  if (named.palina) {
+    const nP = railPath.nearest(named.palina.x, named.palina.z);
+    w0 = Math.min(nP.s, -40);
+    wOff = THREE.MathUtils.clamp(sideOff(named.palina, nP), -34, -16);
+    contextGroup.add(groundRoad([named.palina, railOffsetPt(w0 + 8, wOff)], 6.5));
+  }
+  contextGroup.add(pathRibbon(railPath, w0, w1, 7, wOff, () => 0.03, MAT.linkRoad, 6));
+
+  // new link road from the Admiral Parade / Playford Alive East connection,
+  // curving east to meet the west underpass road north of the bridge
+  const admiral = named.admiral || { x: -340, z: -18 };
+  const end = railOffsetPt(w1 - 6, wOff);
+  const mid = { x: (admiral.x + end.x) / 2, z: Math.min(admiral.z, end.z) - 35 };
+  contextGroup.add(groundRoad([admiral, mid, end], 7));
+  if (!named.admiral) contextGroup.add(groundRoad([{ x: -340, z: 2 }, { x: -340, z: -300 }], 7));
+}
+
+function streetWidth(tags) {
+  const h = tags.highway || '';
+  if (/motorway|trunk|primary/.test(h)) return 9;
+  if (/secondary/.test(h)) return 8;
+  if (/tertiary/.test(h)) return 7;
+  if (/residential|unclassified|living/.test(h)) return 5.5;
+  if (/^service$/.test(h)) return 3.5;
+  return 0;
+}
+
+let crossingRoadName = null;
+
+async function loadStreets(atLat, atLon) {
+  const q = `[out:json][timeout:25];way["highway"](around:650,${atLat},${atLon});out geom;`;
+  try {
+    const res = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(q) });
+    if (!res.ok) throw new Error(res.status);
+    const json = await res.json();
+    disposeGroup(streetsGroup);
+    const named = {};
+    const nameKeys = { charlotte: /charlotte/i, alawoona: /alawoona/i, palina: /palina/i, admiral: /admiral/i };
+    for (const el of json.elements || []) {
+      if (el.type !== 'way' || !el.geometry || el.geometry.length < 2 || !el.tags) continue;
+      const nm = el.tags.name || '';
+      const ptsGeo = el.geometry.map(g => lonLatToLocal(g.lon, g.lat));
+      // collect named end-points nearest the crossing for the connectors
+      for (const k in nameKeys) if (nameKeys[k].test(nm)) {
+        for (const p of ptsGeo) {
+          const m = geoToModel(p.x, p.z);
+          if (!named[k] || Math.hypot(m.x, m.z) < Math.hypot(named[k].x, named[k].z)) named[k] = m;
+        }
+      }
+      const w = streetWidth(el.tags);
+      if (!w) continue;
+      if (crossingRoadName && nm === crossingRoadName) continue;   // the model draws Curtis Rd itself
+      const p = makePath(ptsGeo);
+      streetsGroup.add(pathRibbon(p, p.sMin, p.sMax, w, 0, () => 0.015, MAT.linkRoad, 8));
+    }
+    streetsGroup.visible = params.showStreets;
+    buildConnectors(named);
+  } catch (e) {
+    buildConnectors(null);
+  }
 }
 
 /* ---------------- animated traffic ---------------- */
@@ -1483,8 +1611,7 @@ document.querySelectorAll('#typeBtns button').forEach(b => b.addEventListener('c
   params.structure = b.dataset.type;
   if (params.structure === 'arch' && params.spanCount === 3 &&
       params.spanLengths.slice(0, 3).join() === '30,36,30') {
-    params.spanCount = 1; params.spanLengths[0] = 78;
-    $('spanCount').value = 1; $('spanCountVal').textContent = '1';
+    params.spanLengths[1] = 64;        // a longer centre arch over the rail reads best
   }
   setTypeButtons(); renderSpanList(); buildBridge();
 }));
@@ -1519,6 +1646,7 @@ $('customUrl').addEventListener('change', e => {
   if (params.imgSource === 'custom' && params.customUrl) buildSatellite(site.lat, site.lon);
 });
 $('showBuildings').addEventListener('change', e => { buildingGroup.visible = e.target.checked; });
+$('showStreets').addEventListener('change', e => { params.showStreets = e.target.checked; streetsGroup.visible = e.target.checked; });
 $('bldgOpacity').addEventListener('input', e => {
   params.bldgOpacity = +e.target.value;
   $('bldgOpacityVal').textContent = (+e.target.value).toFixed(2);
@@ -1535,8 +1663,12 @@ $('geoZ').addEventListener('input', e => { params.geoZ = +e.target.value; $('geo
 const typeNames = { 'super-t': 'Precast concrete Super-T girders', 'steel': 'Steel plate girders, composite deck', 'arch': 'Steel network arch (through type)' };
 function updateStats() {
   const s = $('stats');
+  let label = typeNames[params.structure];
+  if (params.structure === 'arch' && params.spanCount > 1) {
+    label = `Network arch over the rail corridor (span ${derived.archIdx + 1}) + concrete approach spans`;
+  }
   s.innerHTML =
-    `<b>${typeNames[params.structure]}</b> — ${params.spanCount} span${params.spanCount > 1 ? 's' : ''}, ` +
+    `<b>${label}</b> — ${params.spanCount} span${params.spanCount > 1 ? 's' : ''}, ` +
     `${params.spanLengths.slice(0, params.spanCount).map(v => v + ' m').join(' + ')}<br>` +
     `Bridge length <b>${derived.totalLen} m</b> · deck level <b>${derived.deckTopY.toFixed(1)} m</b> above rail · ` +
     `approach ramps <b>${Math.round(derived.rampLen)} m</b> each at 5 %<br>` +
@@ -1566,9 +1698,19 @@ renderSpanList();
 setTypeButtons();
 buildRail();
 buildBridge();
+buildConnectors(null);
 buildCars();
 alignSite();
 document.getElementById('loading').remove();
+
+/* collapsible control panel (handy on mobile) */
+const panelEl = document.getElementById('panel');
+const panelToggle = document.getElementById('panelToggle');
+panelToggle.addEventListener('click', () => {
+  panelEl.classList.toggle('collapsed');
+  panelToggle.textContent = panelEl.classList.contains('collapsed') ? '▸' : '▾';
+});
+if (innerWidth < 720) { panelEl.classList.add('collapsed'); panelToggle.textContent = '▸'; }
 
 const clock = new THREE.Clock();
 const yAxis = new THREE.Vector3(0, 1, 0);
