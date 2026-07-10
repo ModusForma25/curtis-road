@@ -7,11 +7,14 @@
 > Confirm the trading name/logo ("Modus Forma") and all site facts against DIT's
 > published concept before issue.
 
-**The teaming idea in one line:** *Modus Forma shapes the hard infrastructure so it
-gives — not takes — space, light and connection; TCL turns the space it makes into a
-living, loved landscape.* The proposal's differentiator is that **one team controls both
-sides of the interface** — the deck soffit, the screens, the embankment, the undercroft —
-where most bids have a landscape architect designing *around* a bridge someone else fixed.
+**The teaming idea in one line:** *Modus Forma — a Melbourne transport-infrastructure
+architecture practice — shapes the hard infrastructure so it gives, not takes, space, light
+and connection; TCL, from Adelaide, turns the space it makes into a living, loved landscape.*
+The proposal's differentiator is that **one team controls both sides of the interface** — the
+deck soffit, the screens, the embankment, the undercroft — where most bids have a landscape
+architect designing *around* a bridge someone else fixed. MF brings **level-crossing-removal
+pedigree from Australia's most mature LXR program**; TCL brings **local SA presence and Kaurna
+relationships**. National LXR expertise, delivered with on-the-ground SA knowledge.
 
 ---
 
@@ -76,15 +79,16 @@ package delivery and innovation (KRAs + gainshare)**. The **biggest carbon and c
 this project is the hard infrastructure itself** — concrete in the deck, piers, barriers and
 retaining walls — which most landscape-led teams cannot touch. **We can.**
 
-**The move.** Use structural and civil design to strip embodied carbon and cost out of the
-scheme, and hand ACCIONA evidence for their gainshare.
+**The move.** Shape the structural form to strip embodied carbon and cost out of the scheme —
+driving the optioneering *with ACCIONA's engineers* — and hand ACCIONA evidence for their gainshare.
 
-- **Modus Forma (hard):** optimise **structure type and span arrangement** (e.g. steel network
-  arch vs Super-T vs plate girder trade-offs); minimise concrete via **span/pier optimisation**;
-  choose **MSE embankment vs retaining wall** to cut wall area and material; maximise **site-won
-  fill** to reduce import/haul; specify **low-carbon concrete and recycled content**. Our
-  **interactive concept model already computes retaining-wall area, fill volumes and span
-  arrangements live** — a ready-made optioneering tool for exactly this.
+- **Modus Forma (hard):** as infrastructure architects, **drive the form and structural
+  optioneering** — structure type and span arrangement (e.g. steel network arch vs Super-T vs plate
+  girder trade-offs), **span/pier rationalisation** to minimise concrete, **MSE embankment vs
+  retaining wall** to cut wall area and material, maximising **site-won fill**, and pushing
+  **low-carbon concrete and recycled content** — all developed collaboratively with the engineering
+  team. Our **interactive concept model already computes retaining-wall area, fill volumes and span
+  arrangements live** — a ready-made optioneering tool for exactly this conversation.
 - **TCL (soft):** parallel reduction in hardscape (less paving, more planting), recycled/site-won
   materials in the landscape, and **carbon drawdown through canopy and soils**.
 - **Interface:** early-package, buildability-led decisions that need hard + soft agreed together —
@@ -202,13 +206,13 @@ through KRAs and gainshare. Our biggest lever is the hard infrastructure — whi
 **HEADLINE:** Chosen for this project — not a portfolio.
 **STANDFIRST:** Six projects, each answering a specific Curtis Road challenge.
 **BODY — 6 project tiles, one relevance line each:**
-- **[MF PROJECT — bridge/structure as place]** — *why it's relevant:* structure designed for public realm, not just span.
-- **[MF PROJECT — retaining/embankment or path structure]** — *…active-transport structure and grades.*
+- **[MF PROJECT — level crossing removal / grade separation (e.g. LXRP)]** — *why it's relevant:* directly analogous — an overpass designed as architecture and public realm, not just a span.
+- **[MF PROJECT — station / transport-structure architecture]** — *…undercroft quality, screens, station interface and wayfinding.*
 - **[TCL PROJECT — greenway / linear park]** — *…continuous green movement spine.*
 - **[TCL PROJECT — play / community space]** — *…activated community floor and play.*
-- **[TCL/MF PROJECT — station precinct / interchange]** — *…station connection and wayfinding.*
-- **[TCL/MF PROJECT — Country-led / growth-corridor]** — *…Kaurna Country and Playford context.*
-**NOTE:** lead each tile with the *relevance*, not the client name.
+- **[TCL PROJECT — SA / Country-led work]** — *…Adelaide Plains, Kaurna Country and Playford context.*
+- **[MF+TCL — active transport / shared-use path]** — *…greenway connection to stations, grades and crossings.*
+**NOTE:** lead each tile with the *relevance*, not the client name. Cite specific **level-crossing-removal / grade-separation** projects prominently — this is the clearest possible proof for a level-crossing-removal brief.
 
 ---
 
@@ -217,11 +221,17 @@ through KRAs and gainshare. Our biggest lever is the hard infrastructure — whi
 **STANDFIRST:** DIT, City of Playford, Kaurna, the rail authority and the Munno Para community —
 we hold relationships and run engagement that protects ACCIONA's tender and program.
 **BODY:**
-- Track record with **DIT / SA Government** design expectations. [EVIDENCE]
-- Working relationships with **City of Playford** and the growth-corridor community. [EVIDENCE]
-- **Kaurna** engagement done properly — design *with* Country. [EVIDENCE]
-- **Working with ACCIONA:** [prior ACCIONA collaboration — state honestly; if limited, note how
-  we integrate into a head contractor's tender team]. *(Requirement 6.)*
+- **Local SA presence (TCL, Adelaide):** relationships with **DIT / SA Government**, **City of
+  Playford**, the rail authority and the growth-corridor community — TCL anchors us on the ground.
+  [EVIDENCE]
+- **Kaurna** engagement done properly — design *with* Country, through TCL's SA relationships. [EVIDENCE]
+- **National transport-infrastructure & LXR delivery (MF, Melbourne):** experience working inside
+  major transport authorities and head-contractor tender teams on level-crossing removals. [EVIDENCE]
+- **Interstate is not a gap — it's coverage.** MF's LXR pedigree + TCL's local presence + a stated
+  delivery model (Adelaide-based landscape lead, MF embedded via regular travel + the shared digital
+  model) means ACCIONA gets national depth *and* a team in the room. Address this pre-emptively.
+- **Working with ACCIONA:** [prior ACCIONA collaboration — state honestly; if limited, note how we
+  integrate into a head contractor's tender team]. *(Requirement 6.)*
 **IMAGE:** Stakeholder/engagement map centred on the site.
 
 ---
@@ -231,8 +241,9 @@ we hold relationships and run engagement that protects ACCIONA's tender and prog
 **STANDFIRST:** Modus Forma leads hard infrastructure; TCL leads soft landscape; a single design
 manager owns the whole.
 **BODY:**
-- **Org chart:** Design Manager **[NAME]** over integrated MF (structure/civil/urban) + TCL
-  (landscape/play/ecology) streams, with subconsultants (arborist, ecologist, lighting, WSUD/civil,
+- **Org chart:** Design Manager **[NAME]** over integrated MF (infrastructure architecture / urban
+  design / digital) + TCL (landscape/play/ecology) streams, with subconsultants (arborist, ecologist,
+  lighting, WSUD/civil,
   Kaurna engagement).
 - **Design steering committee:** [SENIOR NAMES] — MF + TCL principals.
 - **Roles at the interface:** who owns soffit, screens, embankment, undercroft floor, greenway.
@@ -244,10 +255,16 @@ manager owns the whole.
 ### Spread 8 — Teaming strategy  *(Header: Strongest teaming)*
 **HEADLINE:** Where we don't do it in-house, we've already partnered.
 **STANDFIRST:** An honest coverage map — and how MF + TCL + named subconsultants close every gap.
-**BODY — capability-coverage matrix:** rows = disciplines (structural, civil/WSUD, urban design,
-landscape architecture, play, ecology/biodiversity, arboriculture, lighting, Kaurna engagement,
-visualisation/digital); columns = MF / TCL / subconsultant / gap-and-how-closed. *(Requirement 7.)*
-**CALLOUT:** *Digital/parametric modelling in-house (MF) — the concept model you're looking at is ours.*
+**BODY — capability-coverage matrix:** rows = disciplines (infrastructure/bridge architecture,
+urban design, structural/civil engineering, WSUD, landscape architecture, play, ecology/biodiversity,
+arboriculture, lighting, Kaurna engagement, visualisation/digital); columns = MF / TCL / subconsultant
+/ gap-and-how-closed. Be candid: MF does the **architecture** of the hard infrastructure — structural/
+civil **engineering** sits with ACCIONA's engineers or a named subconsultant, and we design to
+integrate with them. *(Requirement 7.)*
+**CALLOUTS:**
+- *Digital/parametric modelling in-house (MF) — the concept model you're looking at is ours.*
+- *Interstate delivery, solved: Adelaide-based landscape lead (TCL) + MF embedded via travel and the
+  shared model — national LXR depth with a local team in the room.*
 
 ---
 
