@@ -39,7 +39,7 @@ are helping ACCIONA win, not simply servicing a scope.
 | 1 | Understanding of key project issues | Site-specific analysis + a point of view, not a generic checklist. **This is where our design thinking lives.** |
 | 2 | Sustainability initiatives — decarbonisation, regenerative, circular economy, community/social legacy, **biodiversity improvement vs the concept design** | A measurable, headline pillar mirroring ACCIONA's own "regenerative infrastructure" brand — see §3. |
 | 3 | Capability & experience — **specific to this project** | Curated projects: **level-crossing removals / grade separations & transport structures (MF)**, greenways/active transport, station precincts, play & community space, growth-corridor & Country-led work (TCL) — not a full portfolio. |
-| 4 | Client & stakeholder relationships | DIT, City of Playford, Kaurna, rail authority, community — led by **TCL's on-the-ground SA presence**; evidence we hold trust and run good engagement. |
+| 4 | Client & stakeholder relationships | DIT, City of Playford, Kaurna, rail authority, community — TCL's on-the-ground SA presence + MF's SA delivery on **Torrens to Darlington**; **Karl Telfer** (Kaurna) a shared, named relationship. Evidence we hold trust and run good engagement. |
 | 5 | Key team & leadership (incl. subconsultants + **design steering committee**); CVs separate | One integrated org chart, named design manager, clear MF↔TCL roles, steering-committee seniority. |
 | 6 | Examples of having worked **with ACCIONA** in the relevant sector | Prior ACCIONA collaboration = de-risked teaming. If limited, address honestly in §7. |
 | 7 | Limitations on internal capability + how addressed | Turn into a **teaming-strength** narrative: MF + TCL + named subconsultants close every gap. |
@@ -63,13 +63,25 @@ reads as one argument, not seven disconnected sections.
 2. **"Designed to regenerate."** Biodiversity net-gain, decarbonisation and circular materials
    are *designed into* the landscape and urban realm and **measured against the concept** —
    feeding directly into ACCIONA's KRAs and gainshare.
-3. **"Proven on level crossings, rooted in SA."** **Modus Forma** — a Melbourne architecture
-   practice specialising in **transport infrastructure** — brings design pedigree from the
-   country's most mature **level-crossing-removal / grade-separation** program to a state early
-   in its own LXR journey, plus in-house **digital/parametric design & visualisation** (the
-   concept model is ours). **TCL** brings **Adelaide-based** landscape leadership, local SA
-   presence and **Kaurna** relationships. The interstate + local pairing is a strength: national
-   LXR expertise, delivered with genuine on-the-ground SA knowledge.
+3. **"An Adelaide answer, informed by hard-won lessons."** **Modus Forma** — a Melbourne
+   architecture practice specialising in **transport infrastructure** — brings lessons from the
+   country's most mature **level-crossing-removal** program, *offered to be adapted to Adelaide,
+   not imposed on it* (see the tone note below). We already have **SA runs on the board** —
+   **Torrens to Darlington**, delivered with Kaurna cultural leader **Karl Telfer**, whom **TCL
+   has also worked with extensively** and whom we propose as **Aboriginal urban design
+   consultant**. **TCL** leads the **soft landscape** from **Adelaide** with deep local presence.
+   Plus MF's in-house **digital/parametric design & visualisation** (the concept model is ours).
+   The result: national depth, an Adelaide-specific, Kaurna-led answer, and a team already known
+   in SA.
+
+> **Tone note — read before writing a word about Melbourne.** Adelaide is proud of its city and
+> reacts badly to "Melbourne knows best." Never present Melbourne's LXR as the template Adelaide
+> should copy. Frame it as **experience that de-risks Adelaide's own approach**: *"we've seen what
+> works and what fails across dozens of crossings, so we can help Curtis Road avoid the pitfalls
+> and do it the Adelaide way."* Every Melbourne lesson must arrive attached to **how it adapts to
+> Adelaide's specific context** — Kaurna Country, the Adelaide Plains climate, Playford's
+> community, SA materials and character. Lead with the Adelaide-specific solution; let the
+> experience sit quietly underneath it as credibility, not as a lecture.
 
 ---
 
@@ -79,15 +91,19 @@ The user's brief: *we try to show project analysis and design ideas beyond the s
 Below is a bank of **site-specific** ideas to develop into 3–4 headline "design moves." Each is
 grounded in Curtis Road / Munno Para — not portable to any project.
 
-- **LXR-proven structure-as-architecture (Modus Forma).** As a transport-infrastructure
-  architecture practice, MF designs the **overpass itself as a piece of architecture** — not just
-  a span to be dressed. Bring hard-won lessons from Australia's most mature level-crossing-removal
-  program (structure type, undercroft quality, screens, station interfaces) to a state early in
-  its own LXR journey. Few landscape-led teams can shape the bridge; we lead with it.
-- **Country-led narrative (Kaurna) — TCL-led.** Organise the whole scheme around one idea drawn
-  from Country — the story of *water, woodland (wirra) and movement* across the Adelaide Plains —
-  developed *with* Kaurna through TCL's SA relationships, not applied as decoration. Gives DIT a
-  defensible cultural-design spine and satisfies SA Gov's design-with-Country expectations.
+- **Structure-as-architecture, lessons adapted for Adelaide (Modus Forma).** As a transport-
+  infrastructure architecture practice, MF designs the **overpass itself as a piece of
+  architecture** — not just a span to be dressed. We bring hard-won lessons from Australia's most
+  mature LXR program *as a way to de-risk Curtis Road, not a template to copy* — every lesson
+  translated into **what it means for Adelaide's specific context** (Kaurna Country, the Plains
+  climate, Playford, SA character and materials). Few landscape-led teams can shape the bridge; we
+  lead with it — humbly, and Adelaide-first.
+- **Country-led narrative with Karl Telfer (Kaurna).** Organise the whole scheme around one idea
+  drawn from Country — the story of *water, woodland (wirra) and movement* across the Adelaide
+  Plains — developed *with* Kaurna cultural leader **Karl Telfer** (our proposed Aboriginal urban
+  design consultant, with whom MF worked on **Torrens to Darlington** and TCL extensively), not
+  applied as decoration. Gives DIT a defensible cultural-design spine and satisfies SA Gov's
+  design-with-Country expectations.
 - **"The room under the bridge."** The Charlotte St–Alawoona Rd local connection and community
   space sit *beneath* the structure. Treat the undercroft as a designed **room**, not residual
   space: sculptural lighting, CPTED/passive surveillance, weather- and sun-shelter, court/play/
@@ -170,7 +186,7 @@ commercial/insurance review **now**, in parallel with writing.
 3. **Nominate the design steering committee** (senior, named).
 4. **Kick off the commercial/insurance review** of Attachment A (gating item; longest lead time).
 5. **Lock the 3–4 headline design moves** (§3) and brief renders/stills from the concept model for the A3.
-6. **Confirm subconsultants** needed to close capability gaps (e.g. arborist, ecologist, lighting, civil/WSUD, Kaurna engagement) for the team/teaming spreads.
+6. **Confirm subconsultants** needed to close capability gaps — **Karl Telfer as Aboriginal urban design consultant** (shared MF/TCL relationship, T2D), plus arborist, ecologist, lighting, civil/WSUD/structural — for the team/teaming spreads.
 
 ---
 

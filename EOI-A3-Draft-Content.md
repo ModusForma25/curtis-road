@@ -12,9 +12,17 @@ architecture practice — shapes the hard infrastructure so it gives, not takes,
 and connection; TCL, from Adelaide, turns the space it makes into a living, loved landscape.*
 The proposal's differentiator is that **one team controls both sides of the interface** — the
 deck soffit, the screens, the embankment, the undercroft — where most bids have a landscape
-architect designing *around* a bridge someone else fixed. MF brings **level-crossing-removal
-pedigree from Australia's most mature LXR program**; TCL brings **local SA presence and Kaurna
-relationships**. National LXR expertise, delivered with on-the-ground SA knowledge.
+architect designing *around* a bridge someone else fixed. MF brings **lessons from Australia's
+most mature LXR program — adapted to Adelaide, not imposed on it** — plus **SA delivery on
+Torrens to Darlington** with Kaurna leader **Karl Telfer** (our proposed Aboriginal urban design
+consultant, also a long-standing TCL collaborator). TCL leads the **soft landscape** from
+**Adelaide**. National depth; an Adelaide-specific, Kaurna-led answer.
+
+> **Tone rule for every Melbourne reference.** Adelaide is proud and dislikes being told Melbourne
+> knows best. Never position Melbourne's LXR as the template. Frame it as *experience that de-risks
+> Adelaide's own approach*, always paired with **how it adapts to Adelaide's context** (Kaurna
+> Country, Plains climate, Playford, SA character). Lead with the Adelaide solution; let the
+> experience sit underneath as quiet credibility.
 
 ---
 
@@ -106,11 +114,12 @@ outer suburb (Munno Para / City of Playford) on the Adelaide Plains, on **Kaurna
 **The move.** Turn the corridor from grey infrastructure into a **regenerating landscape** with a
 number attached.
 
-- **TCL (soft):** reinstate locally indigenous **grey box grassy woodland / native grassland**
-  understorey; stitch **habitat along the greenway**; a **canopy-first "cool corridor"** heat
-  strategy (shade targets, species for a warming/drying climate); a **Kaurna Country-led** planting
-  and narrative developed *with* Kaurna; **social legacy** via community propagation/nursery and
-  First Nations enterprise in planting and maintenance.
+- **TCL (soft) + Karl Telfer (Kaurna):** reinstate locally indigenous **grey box grassy woodland /
+  native grassland** understorey; stitch **habitat along the greenway**; a **canopy-first "cool
+  corridor"** heat strategy (shade targets, species for a warming/drying climate); a **Kaurna
+  Country-led** planting and narrative developed *with* **Karl Telfer** (Aboriginal urban design
+  consultant, shared MF/TCL relationship from Torrens to Darlington); **social legacy** via
+  community propagation/nursery and First Nations enterprise in planting and maintenance.
 - **Modus Forma (hard):** treat the **overpass as a catchment** — capture and clean deck/approach
   stormwater to **irrigate the very landscape that greens the corridor** (water security de-risks
   establishment); WSUD infrastructure, raingardens as amenity, and structural provision for soil
@@ -206,13 +215,15 @@ through KRAs and gainshare. Our biggest lever is the hard infrastructure — whi
 **HEADLINE:** Chosen for this project — not a portfolio.
 **STANDFIRST:** Six projects, each answering a specific Curtis Road challenge.
 **BODY — 6 project tiles, one relevance line each:**
-- **[MF PROJECT — level crossing removal / grade separation (e.g. LXRP)]** — *why it's relevant:* directly analogous — an overpass designed as architecture and public realm, not just a span.
-- **[MF PROJECT — station / transport-structure architecture]** — *…undercroft quality, screens, station interface and wayfinding.*
+- **Torrens to Darlington (MF + Karl Telfer, in SA)** — *why it's relevant:* proof we deliver major
+  transport infrastructure **in Adelaide, with Kaurna leadership** — answers the "why a Melbourne firm" question before it's asked. **Lead with this one.**
+- **[MF PROJECT — level crossing removal / grade separation (e.g. LXRP)]** — *why it's relevant:* directly analogous overpass-as-architecture; **caption as *lessons we'd adapt for Curtis Road*, not a Melbourne template.**
 - **[TCL PROJECT — greenway / linear park]** — *…continuous green movement spine.*
 - **[TCL PROJECT — play / community space]** — *…activated community floor and play.*
-- **[TCL PROJECT — SA / Country-led work]** — *…Adelaide Plains, Kaurna Country and Playford context.*
+- **[TCL PROJECT — SA / Country-led work, ideally with Karl Telfer]** — *…Adelaide Plains, Kaurna Country and Playford context.*
 - **[MF+TCL — active transport / shared-use path]** — *…greenway connection to stations, grades and crossings.*
-**NOTE:** lead each tile with the *relevance*, not the client name. Cite specific **level-crossing-removal / grade-separation** projects prominently — this is the clearest possible proof for a level-crossing-removal brief.
+**NOTE:** lead each tile with the *relevance*, not the client name. Put the **SA projects (T2D) and
+LXR experience** up front — but caption the LXR work as *lessons for Adelaide*, never "how Melbourne did it."
 
 ---
 
@@ -225,11 +236,18 @@ we hold relationships and run engagement that protects ACCIONA's tender and prog
   Playford**, the rail authority and the growth-corridor community — TCL anchors us on the ground.
   [EVIDENCE]
 - **Kaurna** engagement done properly — design *with* Country, through TCL's SA relationships. [EVIDENCE]
-- **National transport-infrastructure & LXR delivery (MF, Melbourne):** experience working inside
-  major transport authorities and head-contractor tender teams on level-crossing removals. [EVIDENCE]
-- **Interstate is not a gap — it's coverage.** MF's LXR pedigree + TCL's local presence + a stated
-  delivery model (Adelaide-based landscape lead, MF embedded via regular travel + the shared digital
-  model) means ACCIONA gets national depth *and* a team in the room. Address this pre-emptively.
+- **We've already delivered in SA (MF):** **Torrens to Darlington** — major transport
+  infrastructure in Adelaide, alongside **Karl Telfer**. MF is a known quantity here, not a
+  fly-in. [EVIDENCE]
+- **Karl Telfer — a shared, named Kaurna relationship:** worked with by *both* MF (T2D) and TCL
+  (extensively). Proposed as our **Aboriginal urban design consultant** — continuity of trust, not
+  a cold introduction. [EVIDENCE]
+- **National transport-infrastructure & LXR experience (MF):** lessons from inside major LXR
+  programs — offered to *de-risk Adelaide's approach and adapt to it*, never to import a Melbourne
+  template. [EVIDENCE]
+- **Interstate is not a gap — it's coverage.** TCL's Adelaide base + MF's SA track record + Karl
+  Telfer + a stated delivery model (Adelaide-based landscape lead, MF embedded via travel + the
+  shared model) means ACCIONA gets national depth *and* a local team in the room.
 - **Working with ACCIONA:** [prior ACCIONA collaboration — state honestly; if limited, note how we
   integrate into a head contractor's tender team]. *(Requirement 6.)*
 **IMAGE:** Stakeholder/engagement map centred on the site.
@@ -242,9 +260,9 @@ we hold relationships and run engagement that protects ACCIONA's tender and prog
 manager owns the whole.
 **BODY:**
 - **Org chart:** Design Manager **[NAME]** over integrated MF (infrastructure architecture / urban
-  design / digital) + TCL (landscape/play/ecology) streams, with subconsultants (arborist, ecologist,
-  lighting, WSUD/civil,
-  Kaurna engagement).
+  design / digital) + TCL (landscape/play/ecology) streams, with **Karl Telfer — Aboriginal urban
+  design consultant (Kaurna)** positioned as a cultural design lead across the whole (not a bolt-on),
+  plus subconsultants (arborist, ecologist, lighting, WSUD/structural/civil).
 - **Design steering committee:** [SENIOR NAMES] — MF + TCL principals.
 - **Roles at the interface:** who owns soffit, screens, embankment, undercroft floor, greenway.
 **CALLOUT:** CVs provided separately in standard consultant format (appendix).
@@ -257,7 +275,7 @@ manager owns the whole.
 **STANDFIRST:** An honest coverage map — and how MF + TCL + named subconsultants close every gap.
 **BODY — capability-coverage matrix:** rows = disciplines (infrastructure/bridge architecture,
 urban design, structural/civil engineering, WSUD, landscape architecture, play, ecology/biodiversity,
-arboriculture, lighting, Kaurna engagement, visualisation/digital); columns = MF / TCL / subconsultant
+arboriculture, lighting, **Aboriginal urban design (Karl Telfer)**, visualisation/digital); columns = MF / TCL / subconsultant
 / gap-and-how-closed. Be candid: MF does the **architecture** of the hard infrastructure — structural/
 civil **engineering** sits with ACCIONA's engineers or a named subconsultant, and we design to
 integrate with them. *(Requirement 7.)*
