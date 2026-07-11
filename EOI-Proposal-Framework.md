@@ -39,7 +39,7 @@ are helping ACCIONA win, not simply servicing a scope.
 | 1 | Understanding of key project issues | Site-specific analysis + a point of view, not a generic checklist. **This is where our design thinking lives.** |
 | 2 | Sustainability initiatives — decarbonisation, regenerative, circular economy, community/social legacy, **biodiversity improvement vs the concept design** | A measurable, headline pillar mirroring ACCIONA's own "regenerative infrastructure" brand — see §3. |
 | 3 | Capability & experience — **specific to this project** | Curated projects: **level-crossing removals / grade separations & transport structures (MF)**, greenways/active transport, station precincts, play & community space, growth-corridor & Country-led work (TCL) — not a full portfolio. |
-| 4 | Client & stakeholder relationships | DIT, City of Playford, Kaurna, rail authority, community — team **physically in Adelaide** (TCL's Adelaide office + MF's permanent ADL staff member); MF **design architect on Torrens to Darlington**; **Karl Telfer** (Kaurna) a shared, named relationship. Evidence we hold trust and run good engagement. |
+| 4 | Client & stakeholder relationships | DIT, **ODASA**, City of Playford, Kaurna, rail authority, community — team **physically in Adelaide** (TCL's Adelaide office + MF's permanent ADL staff member); MF **design architect on Torrens to Darlington** with **working ODASA relationships** from that project; **Karl Telfer** (Kaurna) a shared, named relationship. Evidence we hold trust and run good engagement. |
 | 5 | Key team & leadership (incl. subconsultants + **design steering committee**); CVs separate | One integrated org chart, named design manager, clear MF↔TCL roles, steering-committee seniority. |
 | 6 | Examples of having worked **with ACCIONA** in the relevant sector | Prior ACCIONA collaboration = de-risked teaming. If limited, address honestly in §7. |
 | 7 | Limitations on internal capability + how addressed | Turn into a **teaming-strength** narrative: MF + TCL + named subconsultants close every gap. |
@@ -70,9 +70,12 @@ watching. Showing we understand it signals we're a strategic partner, not just a
   congestion relief and community benefit are all politically valuable. Design quality is not
   optional dressing — it's the story government wants to tell.
 - **DIT delivery = SA Government design expectations.** Government ownership brings DIT/SA standards
-  and processes — likely design review (**ODASA / Government Architect**), **Kaurna/reconciliation**
+  and processes — **ODASA / Government Architect design review**, **Kaurna/reconciliation**
   commitments, **Green Adelaide** canopy and WSUD policy, and genuine community engagement. ACCIONA
-  needs a consultant fluent in DIT's world — which we are (T2D with DIT, permanent SA presence).
+  needs a consultant fluent in DIT's world — which we are (T2D with DIT, permanent SA presence),
+  including **good working relationships with ODASA members from T2D**. Name this in the EOI:
+  design review is a program risk for a D&C contractor, and a consultant the reviewers already
+  know and trust is a de-risking asset ACCIONA will value.
 
 **What this means for our EOI.** ACCIONA isn't only buying landscape — it's buying help to deliver
 a politically visible, housing-critical, publicly-scrutinised project that DIT and two governments

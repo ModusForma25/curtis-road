@@ -164,9 +164,10 @@ how we read it.
   min/hr) and supporting ~425 construction jobs a year — publicly funded and publicly visible. The
   landscape and community spaces are the most tangible proof the investment built a *place*, not
   just a road.
-- **A DIT project = SA design expectations.** Design review, design-with-Country, Green Adelaide
-  canopy and WSUD, real community engagement. We work fluently in DIT's world (Torrens to
-  Darlington) — *so this reads as an SA project, delivered to SA's standards.*
+- **A DIT project = SA design expectations.** **ODASA design review**, design-with-Country, Green
+  Adelaide canopy and WSUD, real community engagement. We work fluently in DIT's world and hold
+  working relationships with ODASA from **Torrens to Darlington** — *so this reads as an SA
+  project, delivered to SA's standards, by a team the reviewers already know.*
 **BODY (as annotated analysis, not prose):**
 - **The undercroft is the prize and the risk.** The concept puts community space and the
   Charlotte St–Alawoona Rd connection *beneath* the deck — success or failure hinges on light,
@@ -256,6 +257,9 @@ we hold relationships and run engagement that protects ACCIONA's tender and prog
 - **We've already delivered in SA (MF):** **design architect on Torrens to Darlington** — major
   transport infrastructure in Adelaide, alongside **Karl Telfer**. MF is a known quantity here, not
   a fly-in. [EVIDENCE]
+- **ODASA — we know the design reviewers.** Good working relationships with ODASA members from
+  T2D. Design review is where D&C programs stall; a consultant the reviewers already trust
+  de-risks ACCIONA's approvals pathway and program. [EVIDENCE — name the review processes navigated]
 - **Karl Telfer — a shared, named Kaurna relationship:** worked with by *both* MF (T2D) and TCL
   (extensively). Proposed as our **Aboriginal urban design consultant** — continuity of trust, not
   a cold introduction. [EVIDENCE]
