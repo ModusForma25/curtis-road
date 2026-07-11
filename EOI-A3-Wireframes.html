@@ -1,0 +1,713 @@
+<title>Curtis Road EOI — A3 Layout Wireframes</title>
+<style>
+  :root{
+    --mm: 2.6px;
+    --paper:#F7F6F2;
+    --sheet:#FFFFFF;
+    --ink:#1E2B38;
+    --wire:#39506B;
+    --wire-soft:#8FA3B8;
+    --hatch:rgba(57,80,107,.10);
+    --hatch-line:rgba(57,80,107,.28);
+    --tint:#EDF0F3;
+    --tint-strong:#E2E8ED;
+    --red:#C8451A;
+    --greek:rgba(30,43,56,.30);
+    --greek-hl:rgba(30,43,56,.78);
+    --rev:#22384E;
+    --rev-ink:#EAF0F5;
+    --shadow:0 1px 3px rgba(30,43,56,.10),0 8px 28px rgba(30,43,56,.08);
+    --mono:ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;
+    --sans:"Helvetica Neue",Helvetica,Arial,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --paper:#12181F; --sheet:#1A222B; --ink:#E5EBF1; --wire:#7E97B0; --wire-soft:#4E6379;
+      --hatch:rgba(126,151,176,.10); --hatch-line:rgba(126,151,176,.30);
+      --tint:#212B36; --tint-strong:#28343F; --red:#E86A3C;
+      --greek:rgba(229,235,241,.28); --greek-hl:rgba(229,235,241,.82);
+      --rev:#0D1319; --rev-ink:#D8E2EB; --shadow:0 1px 3px rgba(0,0,0,.4),0 8px 28px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#12181F; --sheet:#1A222B; --ink:#E5EBF1; --wire:#7E97B0; --wire-soft:#4E6379;
+    --hatch:rgba(126,151,176,.10); --hatch-line:rgba(126,151,176,.30);
+    --tint:#212B36; --tint-strong:#28343F; --red:#E86A3C;
+    --greek:rgba(229,235,241,.28); --greek-hl:rgba(229,235,241,.82);
+    --rev:#0D1319; --rev-ink:#D8E2EB; --shadow:0 1px 3px rgba(0,0,0,.4),0 8px 28px rgba(0,0,0,.35);
+  }
+  :root[data-theme="light"]{
+    --paper:#F7F6F2; --sheet:#FFFFFF; --ink:#1E2B38; --wire:#39506B; --wire-soft:#8FA3B8;
+    --hatch:rgba(57,80,107,.10); --hatch-line:rgba(57,80,107,.28);
+    --tint:#EDF0F3; --tint-strong:#E2E8ED; --red:#C8451A;
+    --greek:rgba(30,43,56,.30); --greek-hl:rgba(30,43,56,.78);
+    --rev:#22384E; --rev-ink:#EAF0F5; --shadow:0 1px 3px rgba(30,43,56,.10),0 8px 28px rgba(30,43,56,.08);
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+       font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1480px;margin:0 auto;padding:48px 32px 96px}
+
+  /* ---------- document header ---------- */
+  .doc-head{border-bottom:2px solid var(--ink);padding-bottom:28px;margin-bottom:12px}
+  .doc-head .kicker{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--red);margin-bottom:14px}
+  h1{font-size:clamp(28px,4vw,44px);line-height:1.05;margin:0 0 14px;font-weight:700;letter-spacing:-.015em;text-wrap:balance}
+  .doc-head p{max-width:64ch;margin:0;color:var(--ink);opacity:.85}
+
+  /* ---------- spec sheet ---------- */
+  .spec{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1px;background:var(--wire-soft);border:1px solid var(--wire-soft);margin:36px 0 8px}
+  .spec>div{background:var(--sheet);padding:20px 22px}
+  .spec h3{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;margin:0 0 12px;color:var(--wire)}
+  .spec table{border-collapse:collapse;width:100%;font-size:12.5px}
+  .spec td{padding:3px 0;vertical-align:baseline}
+  .spec td:last-child{font-family:var(--mono);font-size:11.5px;text-align:right;color:var(--red);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .spec ul{margin:0;padding-left:16px;font-size:12.5px}
+  .spec li{margin-bottom:6px}
+  .typerow{display:flex;align-items:baseline;justify-content:space-between;gap:12px;border-bottom:1px dotted var(--wire-soft);padding:4px 0}
+  .typerow:last-child{border-bottom:0}
+  .typerow .t-display{font-size:26px;font-weight:700;letter-spacing:-.02em}
+  .typerow .t-stand{font-size:16px;font-weight:400}
+  .typerow .t-body{font-size:12px}
+  .typerow .t-cap{font-size:10px;letter-spacing:.04em}
+  .typerow .t-eyeb{font-size:10px;letter-spacing:.2em;text-transform:uppercase;font-weight:600}
+  .typerow em{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--red);white-space:nowrap}
+  .minigrid{display:flex;gap:2.5%;height:64px;border:1.5px solid var(--wire);padding:5px 3.5%;margin-top:8px}
+  .minigrid i{flex:1;background:var(--hatch);border-left:1px solid var(--hatch-line);border-right:1px solid var(--hatch-line)}
+
+  /* ---------- legend & controls ---------- */
+  .legendbar{display:flex;flex-wrap:wrap;align-items:center;gap:22px;padding:16px 0 8px;border-bottom:1px solid var(--wire-soft);margin-bottom:20px;position:sticky;top:0;background:var(--paper);z-index:5}
+  .leg{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink)}
+  .leg .sw{width:26px;height:16px;border:1px solid var(--wire);flex:none}
+  .sw.im{background:repeating-linear-gradient(45deg,var(--hatch) 0 4px,transparent 4px 8px);border-style:solid}
+  .sw.dg{background:radial-gradient(var(--hatch-line) 1px,transparent 1px);background-size:6px 6px}
+  .sw.tx{background:repeating-linear-gradient(to bottom,var(--greek) 0 2px,transparent 2px 5px)}
+  .sw.pn{background:var(--tint-strong)}
+  .sw.rv{background:var(--rev)}
+  .gridtoggle{margin-left:auto;display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;user-select:none}
+  .gridtoggle input{accent-color:var(--red);width:15px;height:15px;cursor:pointer}
+
+  /* ---------- board = sheet + annotations ---------- */
+  .board{margin:56px 0 0}
+  .board-head{display:flex;align-items:baseline;gap:16px;margin-bottom:6px;flex-wrap:wrap}
+  .sheetno{font-family:var(--mono);font-size:12px;color:var(--red);letter-spacing:.1em}
+  .board-head h2{font-size:21px;margin:0;font-weight:700;letter-spacing:-.01em}
+  .board-head .intent{font-size:13px;opacity:.72;flex-basis:100%;max-width:78ch;margin:2px 0 0}
+  .board-body{display:flex;gap:26px;align-items:flex-start}
+  .sheet-scroll{overflow-x:auto;flex:1;min-width:0;padding-bottom:6px}
+
+  .sheet{position:relative;width:calc(var(--mm)*420);height:calc(var(--mm)*297);background:var(--sheet);
+         box-shadow:var(--shadow);border:1px solid var(--wire-soft);flex:none}
+  .live{position:absolute;left:calc(var(--mm)*15);right:calc(var(--mm)*15);top:calc(var(--mm)*15);bottom:calc(var(--mm)*18);
+        display:grid;grid-template-columns:repeat(12,1fr);column-gap:calc(var(--mm)*5);row-gap:calc(var(--mm)*5)}
+  /* 12-col overlay */
+  .gridlay{position:absolute;left:calc(var(--mm)*15);right:calc(var(--mm)*15);top:calc(var(--mm)*15);bottom:calc(var(--mm)*18);
+           display:grid;grid-template-columns:repeat(12,1fr);column-gap:calc(var(--mm)*5);pointer-events:none;z-index:0}
+  .gridlay i{background:var(--hatch);opacity:.55}
+  body.nogrid .gridlay{display:none}
+  .trim{position:absolute;inset:0;border:1px dashed var(--wire-soft);pointer-events:none;opacity:.5}
+
+  /* folio strip on every inner sheet */
+  .folio{position:absolute;left:calc(var(--mm)*15);right:calc(var(--mm)*15);bottom:calc(var(--mm)*6);
+         display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;color:var(--wire);letter-spacing:.08em}
+
+  /* ---------- zone primitives ---------- */
+  .z{position:relative;border:1.5px solid var(--wire);min-width:0;z-index:1}
+  .z .tag{position:absolute;top:4px;left:6px;right:6px;font-family:var(--mono);font-size:9.5px;letter-spacing:.07em;
+          text-transform:uppercase;color:var(--wire);line-height:1.35;pointer-events:none}
+  .z .dim{position:absolute;bottom:3px;right:6px;font-family:var(--mono);font-size:9px;color:var(--red);font-variant-numeric:tabular-nums}
+  .im{background:repeating-linear-gradient(45deg,var(--hatch) 0 calc(var(--mm)*2.5),transparent calc(var(--mm)*2.5) calc(var(--mm)*5))}
+  .dg{background:radial-gradient(var(--hatch-line) 1px,transparent 1.2px);background-size:calc(var(--mm)*4) calc(var(--mm)*4)}
+  .pn{background:var(--tint-strong)}
+  .rv{background:var(--rev);border-color:var(--rev)}
+  .rv .tag{color:var(--rev-ink);opacity:.85}
+  .rv .dim{color:var(--red)}
+  .plain{border-style:dashed;border-color:var(--wire-soft)}
+
+  /* greeked text block */
+  .tx{border:0;padding-top:2px}
+  .tx .greek{position:absolute;inset:22px 6px 8px 6px;
+    background:repeating-linear-gradient(to bottom,var(--greek) 0 calc(var(--mm)*1.6),transparent calc(var(--mm)*1.6) calc(var(--mm)*4))}
+  .tx.nolabel .greek{inset:6px 6px 8px 6px}
+  /* headline bars */
+  .hl{border:0}
+  .hl .bars{position:absolute;inset:20px 6px auto 6px;display:flex;flex-direction:column;gap:calc(var(--mm)*2.4)}
+  .hl .bars i{height:calc(var(--mm)*8);background:var(--greek-hl)}
+  .hl .bars i:last-child{width:62%}
+  .hl.small .bars i{height:calc(var(--mm)*5)}
+  /* standfirst bars */
+  .sf .bars{position:absolute;inset:20px 6px auto 6px;display:flex;flex-direction:column;gap:calc(var(--mm)*1.8)}
+  .sf{border:0}
+  .sf .bars i{height:calc(var(--mm)*3.4);background:var(--greek);opacity:.85}
+  .sf .bars i:last-child{width:70%}
+  /* eyebrow chip */
+  .eyeb{position:absolute;top:0;left:6px;font-family:var(--mono);font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--red)}
+
+  /* QR */
+  .qr{border:1.5px solid var(--wire);background:
+      conic-gradient(var(--wire) 25%,transparent 0 50%,var(--wire) 0 75%,transparent 0);
+      background-size:calc(var(--mm)*7) calc(var(--mm)*7)}
+  /* annotation marker */
+  .mk{position:absolute;width:20px;height:20px;border-radius:50%;background:var(--red);color:#fff;
+      font-family:var(--mono);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;
+      z-index:3;box-shadow:0 0 0 3px var(--sheet)}
+
+  /* headshot strip */
+  .heads{display:flex;gap:calc(var(--mm)*4);align-items:flex-start;padding:22px 8px 6px}
+  .heads .h{width:calc(var(--mm)*24);flex:none}
+  .heads .face{height:calc(var(--mm)*28);border:1.5px solid var(--wire);
+      background:repeating-linear-gradient(45deg,var(--hatch) 0 4px,transparent 4px 8px)}
+  .heads .nm{height:calc(var(--mm)*6);margin-top:4px;background:repeating-linear-gradient(to bottom,var(--greek) 0 2px,transparent 2px 5px)}
+
+  /* stat tiles inside metrics panel */
+  .stats{position:absolute;inset:26px 8px 30px 8px;display:flex;flex-direction:column;gap:calc(var(--mm)*3)}
+  .stats .st{flex:1;border-bottom:1px solid rgba(234,240,245,.25);display:flex;flex-direction:column;justify-content:center;gap:4px;padding:0 2px}
+  .stats .st:last-child{border-bottom:0}
+  .stats .num{height:calc(var(--mm)*7);width:52%;background:var(--rev-ink);opacity:.9}
+  .stats .lbl{height:calc(var(--mm)*2.2);width:80%;background:var(--rev-ink);opacity:.4}
+
+  /* matrix */
+  .matrix{position:absolute;inset:24px 8px 10px 8px;display:grid;grid-template-columns:2.2fr 1fr 1fr 1fr 1.6fr;grid-auto-rows:1fr;gap:1px;background:var(--wire-soft)}
+  .matrix i{background:var(--sheet)}
+  .matrix i.hd{background:var(--tint-strong)}
+  .matrix i.on{background:var(--hatch-line)}
+
+  /* tiles chips row */
+  .chips{position:absolute;inset:22px 8px 10px 8px;display:flex;gap:calc(var(--mm)*5)}
+  .chips i{flex:1;border:1.5px solid var(--wire);background:var(--tint)}
+
+  /* annotations rail */
+  .notes{width:300px;flex:none;font-size:13px}
+  .notes h4{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--wire);margin:4px 0 12px;border-bottom:1px solid var(--wire-soft);padding-bottom:8px}
+  .notes ol{list-style:none;margin:0;padding:0;counter-reset:n}
+  .notes li{position:relative;padding:0 0 14px 32px;counter-increment:n}
+  .notes li::before{content:counter(n);position:absolute;left:0;top:1px;width:20px;height:20px;border-radius:50%;
+      background:var(--red);color:#fff;font-family:var(--mono);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  .notes li b{display:block;margin-bottom:2px}
+  .notes li span{opacity:.8;font-size:12.5px;line-height:1.5;display:block}
+
+  @media (max-width:1180px){ .board-body{flex-direction:column} .notes{width:auto;max-width:70ch} }
+  @media (max-width:1180px){ :root{--mm:2.3px} }
+  @media (max-width:760px){ :root{--mm:1.9px} }
+</style>
+
+<div class="wrap">
+  <header class="doc-head">
+    <div class="kicker">Modus Forma + TCL · Curtis Road LXR · EOI to Acciona</div>
+    <h1>A3 Layout Wireframes — 10-Page Proposal Document</h1>
+    <p>Landscape A3 (420 × 297 mm), single pages, reading as sequential spreads. One hero element per page at 50–60% of
+    the sheet, body text locked to 3-column measures for legibility, and exactly one “loud” moment in the whole
+    document (the reversed metrics panel, Sheet 04). Proportions are exact; screen scale is indicative.</p>
+  </header>
+
+  <div class="spec">
+    <div>
+      <h3>Grid — 12 col / 5 mm</h3>
+      <table>
+        <tr><td>Page</td><td>420 × 297 mm</td></tr>
+        <tr><td>Margins T / side / foot</td><td>15 / 15 / 18 mm</td></tr>
+        <tr><td>Live area</td><td>390 × 264 mm</td></tr>
+        <tr><td>Column / gutter</td><td>27.9 / 5 mm</td></tr>
+        <tr><td>Body measure (3 col)</td><td>93.75 mm ≈ 58 ch</td></tr>
+        <tr><td>Baseline grid</td><td>4.5 mm</td></tr>
+      </table>
+      <div class="minigrid" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+    <div>
+      <h3>Type scale — 4 sizes only</h3>
+      <div class="typerow"><span class="t-display">Page headline</span><em>42/44 pt bold</em></div>
+      <div class="typerow"><span class="t-stand">Standfirst</span><em>15/20 pt</em></div>
+      <div class="typerow"><span class="t-body">Body text — 9.5 on 13.5, 3-col measure, ranged left</span><em>9.5/13.5 pt</em></div>
+      <div class="typerow"><span class="t-cap">Captions &amp; annotations</span><em>7.5/10 pt</em></div>
+      <div class="typerow"><span class="t-eyeb">Win-theme eyebrow</span><em>9 pt caps +160</em></div>
+    </div>
+    <div>
+      <h3>Imagery rules</h3>
+      <ul>
+        <li><b>Full bleed</b> only on cover, back cover and the Sheet 03 section drawing — everything else locks to the grid.</li>
+        <li>Every image earns a <b>working caption</b> (7.5 pt) that carries an argument, not a description.</li>
+        <li>Renders from the concept model are the hero currency — treat photos as support at 3–4 col sizes.</li>
+        <li>Diagrams share one line-weight + colour system across all 10 pages.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Colour &amp; rhythm</h3>
+      <ul>
+        <li>Neutral page; <b>one accent</b> drawn from the render palette, used for eyebrows, keylines, relevance lines.</li>
+        <li>Tinted panels ≤ 10% for context/callouts; <b>one reversed panel in the whole document</b> (Sheet 04 metrics).</li>
+        <li>Win-theme eyebrow + folio in the same position on every page — the document’s heartbeat.</li>
+        <li>Hero : text ratio ≈ 60 : 40 on analysis pages, 50 : 50 on evidence pages.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="legendbar">
+    <span class="leg"><span class="sw im"></span>Render / photo</span>
+    <span class="leg"><span class="sw dg"></span>Diagram / drawing</span>
+    <span class="leg"><span class="sw tx"></span>Body text (greeked)</span>
+    <span class="leg"><span class="sw pn"></span>Tinted panel</span>
+    <span class="leg"><span class="sw rv"></span>Reversed panel</span>
+    <label class="gridtoggle"><input type="checkbox" id="gt" checked>12-col grid</label>
+  </div>
+
+  <!-- ================= SHEET 01 — COVER ================= -->
+  <section class="board">
+    <div class="board-head">
+      <span class="sheetno">SHEET 01 / 10</span><h2>Cover — the model is the argument</h2>
+      <p class="intent">Full-bleed hero render, title block seated on the grid at bottom-left. No contents list, no logos parade — one image, one line.</p>
+    </div>
+    <div class="board-body">
+      <div class="sheet-scroll"><div class="sheet">
+        <div class="z im" style="position:absolute;inset:0;border:0">
+          <span class="tag">HERO RENDER — concept model, undercroft or greenway dusk view · FULL BLEED</span>
+          <span class="dim">426 × 303 incl. 3 bleed</span>
+        </div>
+        <div style="position:absolute;left:calc(var(--mm)*15);right:calc(var(--mm)*15);bottom:calc(var(--mm)*18);top:calc(var(--mm)*15);display:grid;grid-template-columns:repeat(12,1fr);column-gap:calc(var(--mm)*5);align-content:end">
+          <div class="z pn" style="grid-column:1/8;height:calc(var(--mm)*74);position:relative">
+            <span class="eyeb">CURTIS ROAD LEVEL CROSSING REMOVAL · EOI TO ACCIONA</span>
+            <div class="hl" style="position:absolute;inset:0"><div class="bars" style="inset:26px 10px auto 10px"><i></i><i></i></div></div>
+            <span class="tag" style="top:auto;bottom:18px">TEAM LOCKUP — MODUS FORMA + TCL · 9 PT CAPS</span>
+            <span class="dim">title block 225.4 × 74 · on scrim</span>
+            <span class="mk" style="top:-10px;right:-10px">1</span>
+          </div>
+          <div class="z plain" style="grid-column:10/13;height:calc(var(--mm)*20);align-self:end;position:relative">
+            <span class="tag">DATE · PREPARED FOR ACCIONA · 7.5 PT</span>
+            <span class="mk" style="top:-10px;right:-10px">2</span>
+          </div>
+        </div>
+        <div class="trim"></div>
+      </div></div>
+      <aside class="notes"><h4>Layout rationale</h4><ol>
+        <li><b>Title block on a scrim, not a band.</b><span>A soft gradient scrim under the type keeps the render continuous edge-to-edge; a solid white band would cut the image and read as a report, not a proposal.</span></li>
+        <li><b>Only two text objects on the page.</b><span>Headline “From level crossing to community landmark” + admin line. Everything else waits. The render must be strong enough to carry it — choose the dusk undercroft view with figures.</span></li>
+      </ol></aside>
+    </div>
+  </section>
+
+  <!-- ================= SHEET 02 — READING THE SITE ================= -->
+  <section class="board">
+    <div class="board-head">
+      <span class="sheetno">SHEET 02 / 10</span><h2>Reading the site — context rail + annotated plan</h2>
+      <p class="intent">Requirement 1. The political/background context sits as a quiet left rail; the annotated site analysis plan is the hero; five analysis points run beneath it in three legible columns.</p>
+    </div>
+    <div class="board-body">
+      <div class="sheet-scroll"><div class="sheet">
+        <div class="gridlay"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="live" style="grid-template-rows:calc(var(--mm)*48) calc(var(--mm)*131) calc(var(--mm)*75)">
+          <div class="z pn" style="grid-column:1/4;grid-row:1/4;position:relative">
+            <span class="eyeb" style="top:8px">WHY THIS PROJECT, WHY NOW</span>
+            <div class="tx nolabel" style="position:absolute;inset:30px 0 0 0"><div class="greek" style="inset:0 8px 10px 8px"></div></div>
+            <span class="tag" style="top:auto;bottom:26px">3 CONTEXT ENTRIES: GROWTH &amp; HOMES · PUBLIC VALUE · DIT / ODASA STANDARDS</span>
+            <span class="dim">93.75 × 264</span>
+            <span class="mk" style="top:-10px;left:-10px">1</span>
+          </div>
+          <div class="hl" style="grid-column:4/13;grid-row:1;position:relative">
+            <span class="eyeb">UNDERSTANDING · KEY PROJECT ISSUES</span>
+            <div class="bars"><i></i></div>
+            <div class="sf" style="position:absolute;left:0;right:35%;top:calc(var(--mm)*13);bottom:0"><div class="bars" style="inset:0 6px auto 6px"><i></i><i></i></div></div>
+            <span class="mk" style="top:-10px;right:-6px">2</span>
+          </div>
+          <div class="z dg" style="grid-column:4/13;grid-row:2">
+            <span class="tag">ANNOTATED SITE ANALYSIS PLAN — aerial base from model, redline annotations: undercroft, greenway severance, heat, water, stations</span>
+            <span class="dim">291.25 × 131</span>
+            <span class="mk" style="bottom:-10px;left:calc(50% - 10px)">3</span>
+          </div>
+          <div class="tx z" style="grid-column:4/7;grid-row:3;border:0"><span class="eyeb" style="top:2px">ISSUES 1–2</span><div class="greek"></div></div>
+          <div class="tx z" style="grid-column:7/10;grid-row:3;border:0"><span class="eyeb" style="top:2px">ISSUES 3–4</span><div class="greek"></div></div>
+          <div style="grid-column:10/13;grid-row:3;position:relative">
+            <div class="tx z" style="position:absolute;inset:0 0 calc(var(--mm)*30) 0;border:0"><span class="eyeb" style="top:2px">ISSUE 5</span><div class="greek"></div></div>
+            <div class="qr z" style="position:absolute;left:0;bottom:0;width:calc(var(--mm)*25);height:calc(var(--mm)*25)"></div>
+            <div class="tx z nolabel" style="position:absolute;left:calc(var(--mm)*29);right:0;bottom:0;height:calc(var(--mm)*25);border:0"><div class="greek" style="inset:2px 4px 2px 0"></div></div>
+            <span class="dim" style="position:absolute;bottom:3px;right:0;font-family:var(--mono);font-size:9px;color:var(--red)">QR 25 × 25 → live model</span>
+            <span class="mk" style="bottom:16px;right:-10px">4</span>
+          </div>
+        </div>
+        <div class="folio"><span>MODUS FORMA + TCL — CURTIS ROAD LXR EOI</span><span>UNDERSTANDING · 02</span></div>
+      </div></div>
+      <aside class="notes"><h4>Layout rationale</h4><ol>
+        <li><b>Context rail, 3 columns, 8% tint.</b><span>The political read (Housing Roadmap, public value, DIT/ODASA) frames the page without competing — a rail reads as “context” where a headline band would read as “the point”.</span></li>
+        <li><b>Headline + standfirst share row 1.</b><span>Standfirst stops at ⅔ width — ragged air on the right keeps the top of the page calm.</span></li>
+        <li><b>The plan is the hero at 291 × 131 mm.</b><span>Half the live area. Annotations in the accent colour do the arguing; the aerial base comes straight from the concept model so analysis visibly sits on real geometry.</span></li>
+        <li><b>Analysis in three 93.75 mm columns.</b><span>Five issues distributed 2–2–1; the spare fifth slot takes the QR + “explore the live model” caption — a quiet close, bottom-right, where the eye exits.</span></li>
+      </ol></aside>
+    </div>
+  </section>
+
+  <!-- ================= SHEET 03 — DESIGN RESPONSE ================= -->
+  <section class="board">
+    <div class="board-head">
+      <span class="sheetno">SHEET 03 / 10</span><h2>Design response — four moves over one section</h2>
+      <p class="intent">The ideas page. Four equal move-panels (design democracy — no move outranks another), anchored by a full-width section drawing through the undercroft that proves hard + soft resolved together.</p>
+    </div>
+    <div class="board-body">
+      <div class="sheet-scroll"><div class="sheet">
+        <div class="gridlay"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="live" style="grid-template-rows:calc(var(--mm)*34) calc(var(--mm)*124) calc(var(--mm)*96)">
+          <div class="hl" style="grid-column:1/13;grid-row:1;position:relative">
+            <span class="eyeb">LEFT-OVER TO LANDMARK · OUR DESIGN RESPONSE</span>
+            <div class="bars"><i style="width:55%"></i></div>
+            <div class="sf" style="position:absolute;left:58%;right:0;top:calc(var(--mm)*4);bottom:0"><div class="bars" style="inset:0 6px auto 6px"><i></i><i></i></div></div>
+            <span class="mk" style="top:-10px;left:-10px">1</span>
+          </div>
+          <div style="grid-column:1/4;grid-row:2;display:flex;flex-direction:column;gap:calc(var(--mm)*3)">
+            <div class="z im" style="height:calc(var(--mm)*62);position:relative"><span class="tag">MOVE 1 · SKETCH OVER MODEL STILL — ROOM UNDER THE BRIDGE</span><span class="dim">93.75 × 62</span></div>
+            <div class="tx z" style="flex:1;border:0"><span class="eyeb" style="top:2px">1 — THE ROOM UNDER THE BRIDGE</span><div class="greek"></div></div>
+          </div>
+          <div style="grid-column:4/7;grid-row:2;display:flex;flex-direction:column;gap:calc(var(--mm)*3)">
+            <div class="z im" style="height:calc(var(--mm)*62);position:relative"><span class="tag">MOVE 2 · SKETCH — GREENWAY SPINE</span><span class="dim">93.75 × 62</span></div>
+            <div class="tx z" style="flex:1;border:0"><span class="eyeb" style="top:2px">2 — THE GREENWAY SPINE</span><div class="greek"></div></div>
+          </div>
+          <div style="grid-column:7/10;grid-row:2;display:flex;flex-direction:column;gap:calc(var(--mm)*3)">
+            <div class="z im" style="height:calc(var(--mm)*62);position:relative"><span class="tag">MOVE 3 · DIAGRAM — DESIGN-TO-REDUCE</span><span class="dim">93.75 × 62</span></div>
+            <div class="tx z" style="flex:1;border:0"><span class="eyeb" style="top:2px">3 — DESIGN-TO-REDUCE</span><div class="greek"></div></div>
+          </div>
+          <div style="grid-column:10/13;grid-row:2;display:flex;flex-direction:column;gap:calc(var(--mm)*3);position:relative">
+            <div class="z im" style="height:calc(var(--mm)*62);position:relative"><span class="tag">MOVE 4 · SKETCH — REGENERATE THE PLAINS</span><span class="dim">93.75 × 62</span></div>
+            <div class="tx z" style="flex:1;border:0"><span class="eyeb" style="top:2px">4 — REGENERATE THE PLAINS</span><div class="greek"></div></div>
+            <span class="mk" style="top:-10px;right:-10px">2</span>
+          </div>
+          <div class="z dg" style="grid-column:1/13;grid-row:3;position:relative">
+            <span class="tag">LONG SECTION THROUGH UNDERCROFT — deck soffit + lighting · throw screens · pier rhythm · community floor · planting · one drawing, hard &amp; soft annotated in two label registers</span>
+            <span class="dim">390 × 96</span>
+            <span class="mk" style="bottom:-10px;left:calc(50% - 10px)">3</span>
+          </div>
+        </div>
+        <div class="folio"><span>MODUS FORMA + TCL — CURTIS ROAD LXR EOI</span><span>DESIGN RESPONSE · 03</span></div>
+      </div></div>
+      <aside class="notes"><h4>Layout rationale</h4><ol>
+        <li><b>Headline row shared with standfirst.</b><span>“Four moves that turn the structure into a place” — the standfirst carries the MF-hard/TCL-soft interface claim.</span></li>
+        <li><b>Four equal 3-col panels — numbered because sequence matters.</b><span>Image above text, identical crop heights (62 mm) so the row scans as one system. Numbers reflect the argument order the copy builds, not decoration.</span></li>
+        <li><b>The section is the proof, full width.</b><span>One 390 × 96 mm drawing where MF elements (soffit, screens, piers) and TCL elements (floor, planting, play) are annotated in two label registers — the visual demonstration that one team owns both sides of the interface.</span></li>
+      </ol></aside>
+    </div>
+  </section>
+
+  <!-- ================= SHEET 04 — DESIGNED TO REGENERATE ================= -->
+  <section class="board">
+    <div class="board-head">
+      <span class="sheetno">SHEET 04 / 10</span><h2>Designed to regenerate — the document’s one loud moment</h2>
+      <p class="intent">Requirement 2. Water-cycle/WSUD diagram plus four strategy blocks on the left; the “vs concept design” metrics stack reversed out on the right — the only dark panel in the whole document, so the KRA numbers own the page.</p>
+    </div>
+    <div class="board-body">
+      <div class="sheet-scroll"><div class="sheet">
+        <div class="gridlay"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="live" style="grid-template-rows:calc(var(--mm)*38) calc(var(--mm)*113) calc(var(--mm)*49) calc(var(--mm)*49)">
+          <div class="hl" style="grid-column:1/9;grid-row:1;position:relative">
+            <span class="eyeb">DESIGNED TO REGENERATE · SUSTAINABILITY INITIATIVES</span>
+            <div class="bars"><i style="width:80%"></i></div>
+          </div>
+          <div class="z dg" style="grid-column:1/9;grid-row:2;position:relative">
+            <span class="tag">SYSTEM DIAGRAM — overpass as catchment: deck runoff → treatment → irrigation → canopy/habitat · one continuous loop drawing</span>
+            <span class="dim">258.3 × 113</span>
+            <span class="mk" style="top:-10px;left:calc(40% - 10px)">1</span>
+          </div>
+          <div class="tx z" style="grid-column:1/5;grid-row:3;border:0"><span class="eyeb" style="top:2px">DECARBONISE THE STRUCTURE — MF</span><div class="greek"></div></div>
+          <div class="tx z" style="grid-column:5/9;grid-row:3;border:0"><span class="eyeb" style="top:2px">REGENERATE THE LANDSCAPE — TCL</span><div class="greek"></div></div>
+          <div class="tx z" style="grid-column:1/5;grid-row:4;border:0"><span class="eyeb" style="top:2px">CLOSE THE LOOP ON WATER — BOTH</span><div class="greek"></div></div>
+          <div class="tx z" style="grid-column:5/9;grid-row:4;border:0;position:relative"><span class="eyeb" style="top:2px">SOCIAL LEGACY — BOTH</span><div class="greek"></div>
+            <span class="mk" style="bottom:-6px;left:-10px">2</span></div>
+          <div class="z rv" style="grid-column:9/13;grid-row:1/5;position:relative">
+            <span class="tag">MEASURED VS THE CONCEPT DESIGN — KRA-READY</span>
+            <div class="stats">
+              <div class="st"><i class="num"></i><i class="lbl"></i></div>
+              <div class="st"><i class="num"></i><i class="lbl"></i></div>
+              <div class="st"><i class="num"></i><i class="lbl"></i></div>
+              <div class="st"><i class="num"></i><i class="lbl"></i></div>
+              <div class="st"><i class="num"></i><i class="lbl"></i></div>
+              <div class="st"><i class="num"></i><i class="lbl"></i></div>
+            </div>
+            <span class="tag" style="top:auto;bottom:6px">FOOT: TIES TO ACCIONA KRAs / GAINSHARE · 7.5 PT</span>
+            <span class="dim">126.7 × 264</span>
+            <span class="mk" style="top:-10px;right:-10px">3</span>
+          </div>
+        </div>
+        <div class="folio"><span>MODUS FORMA + TCL — CURTIS ROAD LXR EOI</span><span>DESIGNED TO REGENERATE · 04</span></div>
+      </div></div>
+      <aside class="notes"><h4>Layout rationale</h4><ol>
+        <li><b>One loop diagram, not four small ones.</b><span>Catchment → treatment → irrigation → canopy as a single continuous drawing: the argument is circularity, so the diagram should literally close.</span></li>
+        <li><b>Four strategy blocks in a strict 2 × 2.</b><span>Each labelled with its owner (MF / TCL / BOTH) — the eyebrow does the attribution so the body text doesn’t have to.</span></li>
+        <li><b>Metrics reversed, full height, tabular numerals.</b><span>Six stat tiles (carbon ↓, tonnes ↓, canopy ↑, habitat ↑, species ↑, stormwater ↑), each with its concept-design baseline. Being the sole dark object in 10 pages, it becomes the page Acciona photographs and reuses in their own tender.</span></li>
+      </ol></aside>
+    </div>
+  </section>
+
+  <!-- ================= SHEET 05 — CAPABILITY ================= -->
+  <section class="board">
+    <div class="board-head">
+      <span class="sheetno">SHEET 05 / 10</span><h2>Capability — T2D leads at double width</h2>
+      <p class="intent">Requirement 3. Intro rail left; six curated tiles right, with Torrens to Darlington at double width in the top row — hierarchy by size, so “we already deliver in SA” is read before any Melbourne project.</p>
+    </div>
+    <div class="board-body">
+      <div class="sheet-scroll"><div class="sheet">
+        <div class="gridlay"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="live" style="grid-template-rows:calc(var(--mm)*129.5) calc(var(--mm)*129.5)">
+          <div style="grid-column:1/4;grid-row:1/3;position:relative">
+            <div class="hl small" style="position:absolute;inset:0 0 auto 0;height:calc(var(--mm)*40)">
+              <span class="eyeb">RELEVANT EXPERIENCE</span><div class="bars"><i></i><i></i></div>
+            </div>
+            <div class="sf" style="position:absolute;inset:calc(var(--mm)*44) 0 auto 0;height:calc(var(--mm)*30)"><div class="bars" style="inset:0 6px auto 6px"><i></i><i></i><i></i></div></div>
+            <div class="tx z nolabel" style="position:absolute;inset:calc(var(--mm)*82) 0 calc(var(--mm)*8) 0;border:0"><div class="greek" style="inset:0 6px 0 6px"></div></div>
+            <span class="mk" style="top:-10px;left:-10px">1</span>
+          </div>
+          <div class="z im" style="grid-column:4/10;grid-row:1;position:relative">
+            <span class="tag">HERO TILE — TORRENS TO DARLINGTON · MF DESIGN ARCHITECT, WITH KARL TELFER · image + 3-line relevance caption</span>
+            <span class="dim">192.5 × 129.5</span>
+            <span class="mk" style="top:-10px;left:calc(50% - 10px)">2</span>
+          </div>
+          <div class="z im" style="grid-column:10/13;grid-row:1;position:relative">
+            <span class="tag">TILE — MF LXR / GRADE SEPARATION · “lessons we’d adapt for Curtis Road”</span>
+            <span class="dim">93.75 × 129.5</span>
+            <span class="mk" style="top:-10px;right:-10px">3</span>
+          </div>
+          <div class="z im" style="grid-column:4/7;grid-row:2"><span class="tag">TILE — TCL GREENWAY / LINEAR PARK</span><span class="dim">93.75 × 129.5</span></div>
+          <div class="z im" style="grid-column:7/10;grid-row:2"><span class="tag">TILE — TCL PLAY / COMMUNITY SPACE</span><span class="dim">93.75 × 129.5</span></div>
+          <div class="z im" style="grid-column:10/13;grid-row:2;position:relative">
+            <span class="tag">TILE — TCL SA COUNTRY-LED (W/ KARL TELFER)</span><span class="dim">93.75 × 129.5</span>
+            <span class="mk" style="bottom:-10px;right:-10px">4</span>
+          </div>
+        </div>
+        <div class="folio"><span>MODUS FORMA + TCL — CURTIS ROAD LXR EOI</span><span>CAPABILITY · 05</span></div>
+      </div></div>
+      <aside class="notes"><h4>Layout rationale</h4><ol>
+        <li><b>Intro rail carries the curation logic.</b><span>“Chosen for this project — not a portfolio”, plus the note that every caption leads with relevance, not client name.</span></li>
+        <li><b>T2D at 6 columns — double every other tile.</b><span>Size is the hierarchy: the first project read is the SA one, answering “why a Melbourne firm” before it’s asked. Caption names MF’s design-architect role and Karl Telfer.</span></li>
+        <li><b>LXR tile adjacent but subordinate.</b><span>Its caption is written as “lessons we’d adapt for Curtis Road” — the Adelaide-first tone rule made visible in the layout hierarchy itself.</span></li>
+        <li><b>Uniform image crops within each tile size.</b><span>Two crop ratios only (6-col and 3-col); consistent caption block of 3 lines + 1 accent relevance line keeps six voices reading as one team.</span></li>
+      </ol></aside>
+    </div>
+  </section>
+
+  <!-- ================= SHEET 06 — RELATIONSHIPS ================= -->
+  <section class="board">
+    <div class="board-head">
+      <span class="sheetno">SHEET 06 / 10</span><h2>Relationships — the map holds the centre</h2>
+      <p class="intent">Requirements 4 + 6. A radial stakeholder map centred on the site; five relationship blocks in two columns right, ODASA keylined in the accent; the Acciona working-history note as its own outlined callout.</p>
+    </div>
+    <div class="board-body">
+      <div class="sheet-scroll"><div class="sheet">
+        <div class="gridlay"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="live" style="grid-template-rows:calc(var(--mm)*36) calc(var(--mm)*178) calc(var(--mm)*40)">
+          <div class="hl" style="grid-column:1/13;grid-row:1;position:relative">
+            <span class="eyeb">TRUSTED RELATIONSHIPS · CLIENT &amp; STAKEHOLDER</span>
+            <div class="bars"><i style="width:48%"></i></div>
+            <div class="sf" style="position:absolute;left:52%;right:0;top:calc(var(--mm)*4);bottom:0"><div class="bars" style="inset:0 6px auto 6px"><i></i><i></i></div></div>
+          </div>
+          <div class="z dg" style="grid-column:1/7;grid-row:2/4;position:relative">
+            <span class="tag">RADIAL STAKEHOLDER MAP — site at centre; rings: DIT · ODASA · KAURNA (KARL TELFER) · CITY OF PLAYFORD · RAIL · COMMUNITY; connection lines weighted by relationship depth</span>
+            <span class="dim">192.5 × 223</span>
+            <span class="mk" style="top:-10px;left:calc(50% - 10px)">1</span>
+          </div>
+          <div style="grid-column:7/10;grid-row:2;display:flex;flex-direction:column;gap:calc(var(--mm)*4)">
+            <div class="tx z" style="flex:1;border:0"><span class="eyeb" style="top:2px">A TEAM PHYSICALLY IN ADELAIDE</span><div class="greek"></div></div>
+            <div class="tx z" style="flex:1;border:0"><span class="eyeb" style="top:2px">SA DELIVERY — T2D, DESIGN ARCHITECT</span><div class="greek"></div></div>
+          </div>
+          <div style="grid-column:10/13;grid-row:2;display:flex;flex-direction:column;gap:calc(var(--mm)*4);position:relative">
+            <div class="tx z" style="flex:1;border:1.5px solid var(--red)"><span class="eyeb" style="top:4px;left:8px">ODASA — WE KNOW THE REVIEWERS</span><div class="greek" style="inset:24px 8px 8px 8px"></div></div>
+            <div class="tx z" style="flex:1;border:0"><span class="eyeb" style="top:2px">KARL TELFER — SHARED KAURNA RELATIONSHIP</span><div class="greek"></div></div>
+            <span class="mk" style="top:-10px;right:-10px">2</span>
+          </div>
+          <div class="z plain" style="grid-column:7/13;grid-row:3;position:relative">
+            <span class="tag">CALLOUT — WORKING WITH ACCIONA (REQ. 6) · honest statement, outlined not tinted</span>
+            <span class="dim">192.5 × 40</span>
+            <span class="mk" style="bottom:-10px;right:-10px">3</span>
+          </div>
+        </div>
+        <div class="folio"><span>MODUS FORMA + TCL — CURTIS ROAD LXR EOI</span><span>RELATIONSHIPS · 06</span></div>
+      </div></div>
+      <aside class="notes"><h4>Layout rationale</h4><ol>
+        <li><b>One map instead of a logo wall.</b><span>Line weight encodes relationship depth (T2D-proven vs established vs to-be-built) — honest and more credible than uniform logos. Site at the centre keeps it about Curtis Road, not about us.</span></li>
+        <li><b>ODASA block keylined in the accent.</b><span>The single highlighted relationship — design review is Acciona’s program risk, so the layout points at exactly that reassurance. One highlight only; two would cancel each other.</span></li>
+        <li><b>Acciona note outlined, not tinted.</b><span>An outline reads as a direct, candid aside to the reader — right register for “here is our honest working history with you”.</span></li>
+      </ol></aside>
+    </div>
+  </section>
+
+  <!-- ================= SHEET 07 — TEAM ================= -->
+  <section class="board">
+    <div class="board-head">
+      <span class="sheetno">SHEET 07 / 10</span><h2>Team — one chart, then faces</h2>
+      <p class="intent">Requirement 5. Left rail states the leadership logic; the integrated org chart is the hero; a strip of headshots grounds it in people. Karl Telfer drawn spanning both streams.</p>
+    </div>
+    <div class="board-body">
+      <div class="sheet-scroll"><div class="sheet">
+        <div class="gridlay"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="live" style="grid-template-rows:calc(var(--mm)*40) calc(var(--mm)*155) calc(var(--mm)*59)">
+          <div style="grid-column:1/4;grid-row:1/4;position:relative">
+            <div class="hl small" style="position:absolute;inset:0 0 auto 0;height:calc(var(--mm)*42)">
+              <span class="eyeb">ONE INTEGRATED TEAM</span><div class="bars"><i></i><i></i></div>
+            </div>
+            <div class="sf" style="position:absolute;inset:calc(var(--mm)*46) 0 auto 0;height:calc(var(--mm)*26)"><div class="bars" style="inset:0 6px auto 6px"><i></i><i></i></div></div>
+            <div class="tx z nolabel" style="position:absolute;inset:calc(var(--mm)*80) 0 calc(var(--mm)*30) 0;border:0"><span class="eyeb" style="top:-14px">ROLES AT THE INTERFACE — WHO OWNS WHAT</span><div class="greek" style="inset:0 6px 0 6px"></div></div>
+            <div class="z plain" style="position:absolute;left:0;right:0;bottom:0;height:calc(var(--mm)*22)"><span class="tag">NOTE — CVs SEPARATE, STANDARD FORMAT</span></div>
+            <span class="mk" style="top:-10px;left:-10px">1</span>
+          </div>
+          <div class="z dg" style="grid-column:4/13;grid-row:1/3;position:relative">
+            <span class="tag">INTEGRATED ORG CHART — DESIGN MANAGER [NAME] at top · MF stream (infrastructure architecture / UD / digital) · TCL stream (landscape / play / ecology) · KARL TELFER drawn ACROSS both streams · steering committee band above · subconsultants band below</span>
+            <span class="dim">291.25 × 200</span>
+            <span class="mk" style="top:-10px;left:calc(50% - 10px)">2</span>
+          </div>
+          <div class="z" style="grid-column:4/13;grid-row:3;border:0;position:relative">
+            <span class="eyeb" style="top:0">KEY PEOPLE</span>
+            <div class="heads">
+              <div class="h"><div class="face"></div><div class="nm"></div></div>
+              <div class="h"><div class="face"></div><div class="nm"></div></div>
+              <div class="h"><div class="face"></div><div class="nm"></div></div>
+              <div class="h"><div class="face"></div><div class="nm"></div></div>
+              <div class="h"><div class="face"></div><div class="nm"></div></div>
+              <div class="h"><div class="face"></div><div class="nm"></div></div>
+              <div class="h"><div class="face"></div><div class="nm"></div></div>
+              <div class="h"><div class="face"></div><div class="nm"></div></div>
+            </div>
+            <span class="dim">8 portraits · 24 × 28 ea</span>
+            <span class="mk" style="bottom:-6px;right:-10px">3</span>
+          </div>
+        </div>
+        <div class="folio"><span>MODUS FORMA + TCL — CURTIS ROAD LXR EOI</span><span>TEAM · 07</span></div>
+      </div></div>
+      <aside class="notes"><h4>Layout rationale</h4><ol>
+        <li><b>Rail carries “roles at the interface”.</b><span>Soffit, screens, embankment, undercroft floor, greenway — the ownership list sits beside the chart so a reviewer can cross-check claim against structure in one glance.</span></li>
+        <li><b>Chart drawn, not boxed-and-stacked.</b><span>Single design manager at the apex; Karl Telfer as a horizontal band across both streams — cultural leadership across the whole, visibly not a bolt-on. Steering committee above, subconsultants below: three clear strata.</span></li>
+        <li><b>Headshots uniform and small.</b><span>24 × 28 mm, identical crop and background treatment. Faces build trust; oversizing them turns the page into a yearbook.</span></li>
+      </ol></aside>
+    </div>
+  </section>
+
+  <!-- ================= SHEET 08 — TEAMING ================= -->
+  <section class="board">
+    <div class="board-head">
+      <span class="sheetno">SHEET 08 / 10</span><h2>Teaming strategy — the honest matrix</h2>
+      <p class="intent">Requirement 7. The capability-coverage matrix is the hero — candour as a design statement. Two callout cards on the right answer the questions the matrix raises.</p>
+    </div>
+    <div class="board-body">
+      <div class="sheet-scroll"><div class="sheet">
+        <div class="gridlay"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="live" style="grid-template-rows:calc(var(--mm)*34) calc(var(--mm)*190) calc(var(--mm)*30)">
+          <div class="hl" style="grid-column:1/13;grid-row:1;position:relative">
+            <span class="eyeb">STRONGEST TEAMING · CAPABILITY &amp; LIMITATIONS</span>
+            <div class="bars"><i style="width:58%"></i></div>
+          </div>
+          <div class="z" style="grid-column:1/9;grid-row:2;position:relative">
+            <span class="tag">CAPABILITY-COVERAGE MATRIX — 11 disciplines × MF / TCL / SUBCONSULTANT / HOW CLOSED · row height ≥ 9 mm · zebra tint · dot = capability, named text in final column</span>
+            <div class="matrix" aria-hidden="true">
+              <i class="hd"></i><i class="hd"></i><i class="hd"></i><i class="hd"></i><i class="hd"></i>
+              <i></i><i class="on"></i><i></i><i></i><i></i>
+              <i></i><i class="on"></i><i></i><i></i><i></i>
+              <i></i><i></i><i class="on"></i><i></i><i></i>
+              <i></i><i></i><i class="on"></i><i></i><i></i>
+              <i></i><i></i><i class="on"></i><i></i><i></i>
+              <i></i><i></i><i></i><i class="on"></i><i></i>
+              <i></i><i class="on"></i><i class="on"></i><i></i><i></i>
+              <i></i><i></i><i></i><i class="on"></i><i></i>
+              <i></i><i></i><i></i><i class="on"></i><i></i>
+              <i></i><i class="on"></i><i></i><i></i><i></i>
+            </div>
+            <span class="dim">258.3 × 190</span>
+            <span class="mk" style="top:-10px;left:calc(40% - 10px)">1</span>
+          </div>
+          <div style="grid-column:9/13;grid-row:2;display:flex;flex-direction:column;gap:calc(var(--mm)*5);position:relative">
+            <div class="z pn" style="flex:1;position:relative"><span class="tag">CALLOUT — DIGITAL / PARAMETRIC IN-HOUSE: “THE CONCEPT MODEL YOU’RE LOOKING AT IS OURS” + model still 40 mm</span></div>
+            <div class="z pn" style="flex:1;position:relative"><span class="tag">CALLOUT — INTERSTATE, SOLVED: TCL ADELAIDE OFFICE + MF PERMANENT ADL STAFF + SHARED MODEL</span></div>
+            <span class="mk" style="top:-10px;right:-10px">2</span>
+          </div>
+          <div class="tx z" style="grid-column:1/9;grid-row:3;border:0;position:relative">
+            <span class="eyeb" style="top:2px">CANDOUR LINE — ENGINEERING SITS WITH ACCIONA / NAMED SUB; WE DESIGN TO INTEGRATE</span><div class="greek"></div>
+            <span class="mk" style="bottom:-6px;left:-10px">3</span>
+          </div>
+        </div>
+        <div class="folio"><span>MODUS FORMA + TCL — CURTIS ROAD LXR EOI</span><span>TEAMING · 08</span></div>
+      </div></div>
+      <aside class="notes"><h4>Layout rationale</h4><ol>
+        <li><b>The matrix gets hero treatment deliberately.</b><span>Requirement 7 asks for limitations — making the coverage table the biggest object on the page performs confidence. Dots for capability; the “how closed” column is written text, because that’s the column Acciona is really reading.</span></li>
+        <li><b>Two callouts, not six.</b><span>The only two questions the matrix provokes: “who built the model?” and “does Melbourne distance hurt us?” Each gets one card. Anything more dilutes.</span></li>
+        <li><b>Candour line in body type, full measure.</b><span>The engineering-integration statement runs as plain text under the matrix — quiet, unboxed, factual. Honesty set small reads as confidence; honesty in a big box reads as a disclaimer.</span></li>
+      </ol></aside>
+    </div>
+  </section>
+
+  <!-- ================= SHEET 09 — WHY US ================= -->
+  <section class="board">
+    <div class="board-head">
+      <span class="sheetno">SHEET 09 / 10</span><h2>Why us — the live model closes</h2>
+      <p class="intent">The synthesis page. Model still as hero with the “drive it live in the presentation” offer; four proof blocks right; the three win themes recapped as a quiet baseline strip.</p>
+    </div>
+    <div class="board-body">
+      <div class="sheet-scroll"><div class="sheet">
+        <div class="gridlay"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="live" style="grid-template-rows:calc(var(--mm)*40) calc(var(--mm)*170) calc(var(--mm)*44)">
+          <div class="hl" style="grid-column:1/13;grid-row:1;position:relative">
+            <span class="eyeb">WORKING WITH ACCIONA · BUILT FOR YOUR DELIVERY MODEL</span>
+            <div class="bars"><i style="width:52%"></i></div>
+            <div class="sf" style="position:absolute;left:56%;right:0;top:calc(var(--mm)*4);bottom:0"><div class="bars" style="inset:0 6px auto 6px"><i></i><i></i></div></div>
+          </div>
+          <div class="z im" style="grid-column:1/8;grid-row:2;position:relative">
+            <span class="tag">MODEL STILL — interface view (structure + landscape in one frame) · inset QR 25 × 25 bottom-right · caption: “test spans, screens and sightlines with us, live, in the 30-minute session”</span>
+            <div class="qr" style="position:absolute;right:8px;bottom:26px;width:calc(var(--mm)*25);height:calc(var(--mm)*25)"></div>
+            <span class="dim">225.4 × 170</span>
+            <span class="mk" style="top:-10px;left:calc(50% - 10px)">1</span>
+          </div>
+          <div style="grid-column:8/13;grid-row:2;display:flex;flex-direction:column;gap:calc(var(--mm)*4);position:relative">
+            <div class="tx z" style="flex:1;border:0"><span class="eyeb" style="top:2px">WE MOVE YOUR KRAs</span><div class="greek"></div></div>
+            <div class="tx z" style="flex:1;border:0"><span class="eyeb" style="top:2px">WE DELIVER EARLY &amp; INTEGRATED</span><div class="greek"></div></div>
+            <div class="tx z" style="flex:1;border:0"><span class="eyeb" style="top:2px">WE HELP YOU WIN THE HEAD CONTRACT</span><div class="greek"></div></div>
+            <div class="tx z" style="flex:1;border:0"><span class="eyeb" style="top:2px">A LOCAL TEAM, A LIVE TOOL</span><div class="greek"></div></div>
+            <span class="mk" style="top:-10px;right:-10px">2</span>
+          </div>
+          <div class="z" style="grid-column:1/13;grid-row:3;border:0;position:relative">
+            <span class="eyeb" style="top:0">THE THREE THEMES, ONE LINE EACH</span>
+            <div class="chips"><i></i><i></i><i></i></div>
+            <span class="dim">3 chips · 126.7 × 22 ea</span>
+            <span class="mk" style="bottom:-6px;left:calc(50% - 10px)">3</span>
+          </div>
+        </div>
+        <div class="folio"><span>MODUS FORMA + TCL — CURTIS ROAD LXR EOI</span><span>WHY US · 09</span></div>
+      </div></div>
+      <aside class="notes"><h4>Layout rationale</h4><ol>
+        <li><b>The still shows the interface, not a beauty shot.</b><span>Choose a frame where structure and landscape meet — the undercroft edge or greenway touchdown — because this page argues integration. QR inset on the image itself: the image is the door to the live model.</span></li>
+        <li><b>Four proof blocks, equal weight, eyebrow-led.</b><span>Each eyebrow is a claim Acciona cares about commercially; the body earns it in 4–5 lines. No imagery on the right — the page has its hero.</span></li>
+        <li><b>Theme recap as a baseline strip.</b><span>Three 4-col chips restate the win themes at whisper volume — closure by repetition, not a second climax.</span></li>
+      </ol></aside>
+    </div>
+  </section>
+
+  <!-- ================= SHEET 10 — BACK COVER ================= -->
+  <section class="board">
+    <div class="board-head">
+      <span class="sheetno">SHEET 10 / 10</span><h2>Back cover — one image, an invitation</h2>
+      <p class="intent">Mirror of the cover: a second full-bleed render (different view — arrival at dusk from the greenway), one line of type, contacts. The document ends on the place, not on us.</p>
+    </div>
+    <div class="board-body">
+      <div class="sheet-scroll"><div class="sheet">
+        <div class="z im" style="position:absolute;inset:0;border:0">
+          <span class="tag">CLOSING RENDER — greenway arrival view, dusk, figures · FULL BLEED</span>
+          <span class="dim">426 × 303 incl. 3 bleed</span>
+        </div>
+        <div style="position:absolute;left:calc(var(--mm)*15);right:calc(var(--mm)*15);bottom:calc(var(--mm)*18);display:grid;grid-template-columns:repeat(12,1fr);column-gap:calc(var(--mm)*5)">
+          <div class="z pn" style="grid-column:1/7;height:calc(var(--mm)*42);position:relative">
+            <span class="eyeb">FROM LEVEL CROSSING TO COMMUNITY LANDMARK</span>
+            <span class="tag" style="top:20px">ONE LINE — “WE’D WELCOME THE 30-MINUTE PRESENTATION.” · 15 PT</span>
+            <span class="mk" style="top:-10px;left:-10px">1</span>
+          </div>
+          <div class="z plain" style="grid-column:8/13;height:calc(var(--mm)*42);position:relative">
+            <span class="tag">CONTACTS — MF + TCL, TWO BLOCKS · 7.5 PT · LOGOS SMALL, BASELINE-ALIGNED</span>
+            <span class="mk" style="top:-10px;right:-10px">2</span>
+          </div>
+        </div>
+        <div class="trim"></div>
+      </div></div>
+      <aside class="notes"><h4>Layout rationale</h4><ol>
+        <li><b>The ask, stated once, gently.</b><span>“We’d welcome the 30-minute presentation” is the whole call to action — the reader has just been told the model can be driven live; this line collects on that.</span></li>
+        <li><b>Contacts right, logos small.</b><span>Bottom-right is where a reader looks for the follow-up detail. Logos baseline-aligned with the text block, never larger than the type — the render is the brand here.</span></li>
+      </ol></aside>
+    </div>
+  </section>
+
+  <footer style="margin-top:72px;border-top:1px solid var(--wire-soft);padding-top:20px;font-size:12.5px;opacity:.7;max-width:80ch">
+    Production notes: build in InDesign at trim 420 × 297 mm + 3 mm bleed; all dimensioned zones snap to the 12-col / 5 mm
+    grid and 4.5 mm baseline. Two crop ratios per tile size, one accent colour sampled from the hero renders, and the
+    win-theme eyebrow + folio strip repeat identically on sheets 02–09. Companion copy deck: <b>EOI-A3-Draft-Content.md</b>.
+  </footer>
+</div>
+
+<script>
+  document.getElementById('gt').addEventListener('change',function(){document.body.classList.toggle('nogrid',!this.checked)});
+</script>
