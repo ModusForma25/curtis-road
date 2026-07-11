@@ -49,6 +49,43 @@ are helping ACCIONA win, not simply servicing a scope.
 published concept** — i.e. demonstrate measurable biodiversity **net-gain/uplift**. It is the
 clearest signal in the brief that they want design ideas, not methodology.
 
+### The bigger picture — why this is now DIT's project (and who's watching)
+
+Curtis Road is legally a **City of Playford council road**. It has become a **$250M, 50:50
+Commonwealth–State project** (Albanese + Malinauskas Labor governments, ~$125M each; Playford
+$3.4M) delivered by **DIT** — the state stepping onto a council road to remove a crossing the
+local council could not fund alone. That shift changes what the project is *for*, and who is
+watching. Showing we understand it signals we're a strategic partner, not just a drafting service.
+
+- **It's a housing project as much as a transport one.** The northern suburbs are the centrepiece
+  of the **Malinauskas Government's Housing Roadmap** — projected to take **~40% of Greater
+  Adelaide's growth** over 30 years (Angle Vale, Riverlea, Concordia, Roseworthy). Curtis Road
+  unlocks that growth front. The public realm is how "growth" reads as *liveable community*, not
+  just more cars and houses.
+- **Public money on a public stage.** ~$246.6M of Commonwealth/State money on a council road means
+  the spend must visibly deliver *public value* — and the community-facing landscape and place
+  outcomes are the most visible proof. DIT now owns that design-quality reputation.
+- **Two governments want a legacy.** Federal + State Labor co-funding in a fast-growing northern
+  heartland; safety (21,000 vehicles/day, booms down up to 15 min/hr), **~425 FTE jobs/yr**,
+  congestion relief and community benefit are all politically valuable. Design quality is not
+  optional dressing — it's the story government wants to tell.
+- **DIT delivery = SA Government design expectations.** Government ownership brings DIT/SA standards
+  and processes — likely design review (**ODASA / Government Architect**), **Kaurna/reconciliation**
+  commitments, **Green Adelaide** canopy and WSUD policy, and genuine community engagement. ACCIONA
+  needs a consultant fluent in DIT's world — which we are (T2D with DIT, permanent SA presence).
+
+**What this means for our EOI.** ACCIONA isn't only buying landscape — it's buying help to deliver
+a politically visible, housing-critical, publicly-scrutinised project that DIT and two governments
+need to be *proud* of. Our line: *the landscape and urban design is the part that proves the public
+investment built a community, not just a road — we design so DIT can stand under this bridge and
+point to it.*
+
+> **Tone caveat (important).** In the document be politically **astute, not partisan** — align to
+> the **Housing Roadmap, public value, safety, jobs and community legacy**, not to any party. And
+> do **not** criticise City of Playford's past under-investment (even though the record invites it)
+> — Playford is a stakeholder we need on side. Frame the state's role as *partnership and support*,
+> never as rescue.
+
 ---
 
 ## 2. Our positioning — three win themes to thread through every page
@@ -147,8 +184,8 @@ its header and a strong image.
 
 | Pg | Spread | Content | Requirement | Imagery |
 |----|--------|---------|-------------|---------|
-| 1 | **Cover** | Project title, "[Your Practice] + TCL", one-line proposition ("From level crossing to community landmark"). | — | Hero render from our concept model. |
-| 2 | **Reading the site** | Key project issues as *our analysis*: undercroft/residual space, heat & exposure, severance vs connection, water, biodiversity of the Plains, Playford's growth & disadvantage, Kaurna Country. A sharp point of view. | 1 | Annotated site plan / analysis diagram + context photos. |
+| 1 | **Cover** | Project title, "Modus Forma + TCL", one-line proposition ("From level crossing to community landmark"). | — | Hero render from our concept model. |
+| 2 | **Reading the site** | Opens with a **context panel — why this project, why now**: DIT-delivered, housing-growth-enabling, publicly-funded, SA-standards (government-neutral, per tone caveat). Then key project issues as *our analysis*: undercroft/residual space, heat & exposure, severance vs connection, water, biodiversity of the Plains, Playford's growth, Kaurna Country. A sharp point of view. | 1 | Annotated site plan / analysis diagram + context photos. |
 | 3 | **Our design response** | The 3–4 headline design moves from §3 (room under the bridge; greenway spine; cool corridor; Country narrative). Ideas, not methodology. | 1 | Sketch overlays on model stills; section through the undercroft. |
 | 4 | **Designed to regenerate** | Sustainability as a *designed* outcome: decarbonisation, circular/site-won materials, WSUD, **biodiversity net-gain measured vs concept**, social legacy. Tie explicitly to ACCIONA's KRAs/gainshare. | 2 | Simple metrics panel (canopy/habitat/carbon uplift vs concept) + WSUD diagram. |
 | 5 | **Capability & experience** | 4–6 curated, *relevant* projects: under/over-structure place-making, greenways & active transport, station precincts, growth-corridor & Country-led work. One-line "why it's relevant to Curtis Road" per project. | 3 | Project images with tight captions. |

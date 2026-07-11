@@ -153,7 +153,20 @@ Landscape A3. Placeholder copy to edit. Each spread: **HEADER** (win theme) · *
 **HEADLINE:** We already know this site — and this structure.
 **STANDFIRST:** Curtis Road is not a typical landscape brief. It is a dual-lane overpass over the
 electrified Gawler line at Munno Para, where the best public outcomes and the hardest engineering
-decisions live in the same few metres. Here is how we read it.
+decisions live in the same few metres — and it carries a bigger job than moving traffic. Here is
+how we read it.
+**CONTEXT PANEL — why this project, why now (keep government-neutral, no party names):**
+- **Growth and homes.** A ~$250M, Commonwealth–State–funded project delivered by **DIT** in the
+  state's fastest-growing region — the northern suburbs are projected to take **~40% of Greater
+  Adelaide's growth** and are central to the **Housing Roadmap**. Curtis Road helps *unlock* that
+  growth; the public realm is what makes the growth **liveable**.
+- **Public money, public value.** Removing a bottleneck (21,000 vehicles/day, booms down up to 15
+  min/hr) and supporting ~425 construction jobs a year — publicly funded and publicly visible. The
+  landscape and community spaces are the most tangible proof the investment built a *place*, not
+  just a road.
+- **A DIT project = SA design expectations.** Design review, design-with-Country, Green Adelaide
+  canopy and WSUD, real community engagement. We work fluently in DIT's world (Torrens to
+  Darlington) — *so this reads as an SA project, delivered to SA's standards.*
 **BODY (as annotated analysis, not prose):**
 - **The undercroft is the prize and the risk.** The concept puts community space and the
   Charlotte St–Alawoona Rd connection *beneath* the deck — success or failure hinges on light,
