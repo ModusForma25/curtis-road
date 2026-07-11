@@ -13,10 +13,11 @@ and connection; TCL, from Adelaide, turns the space it makes into a living, love
 The proposal's differentiator is that **one team controls both sides of the interface** — the
 deck soffit, the screens, the embankment, the undercroft — where most bids have a landscape
 architect designing *around* a bridge someone else fixed. MF brings **lessons from Australia's
-most mature LXR program — adapted to Adelaide, not imposed on it** — plus **SA delivery on
-Torrens to Darlington** with Kaurna leader **Karl Telfer** (our proposed Aboriginal urban design
-consultant, also a long-standing TCL collaborator). TCL leads the **soft landscape** from
-**Adelaide**. National depth; an Adelaide-specific, Kaurna-led answer.
+most mature LXR program — adapted to Adelaide, not imposed on it** — plus **SA delivery as design
+architect on Torrens to Darlington** with Kaurna leader **Karl Telfer** (our proposed Aboriginal
+urban design consultant, also a long-standing TCL collaborator). This is a team **in Adelaide**:
+TCL leads the soft landscape from its **Adelaide office** and MF has a **permanent staff member in
+Adelaide**. National depth; an Adelaide-specific, Kaurna-led answer; a local team in the room.
 
 > **Tone rule for every Melbourne reference.** Adelaide is proud and dislikes being told Melbourne
 > knows best. Never position Melbourne's LXR as the template. Frame it as *experience that de-risks
@@ -215,8 +216,8 @@ through KRAs and gainshare. Our biggest lever is the hard infrastructure — whi
 **HEADLINE:** Chosen for this project — not a portfolio.
 **STANDFIRST:** Six projects, each answering a specific Curtis Road challenge.
 **BODY — 6 project tiles, one relevance line each:**
-- **Torrens to Darlington (MF + Karl Telfer, in SA)** — *why it's relevant:* proof we deliver major
-  transport infrastructure **in Adelaide, with Kaurna leadership** — answers the "why a Melbourne firm" question before it's asked. **Lead with this one.**
+- **Torrens to Darlington — MF as design architect (in SA), with Karl Telfer** — *why it's relevant:*
+  proof we deliver major transport infrastructure **in Adelaide, with Kaurna leadership** — answers the "why a Melbourne firm" question before it's asked. **Lead with this one.**
 - **[MF PROJECT — level crossing removal / grade separation (e.g. LXRP)]** — *why it's relevant:* directly analogous overpass-as-architecture; **caption as *lessons we'd adapt for Curtis Road*, not a Melbourne template.**
 - **[TCL PROJECT — greenway / linear park]** — *…continuous green movement spine.*
 - **[TCL PROJECT — play / community space]** — *…activated community floor and play.*
@@ -236,18 +237,21 @@ we hold relationships and run engagement that protects ACCIONA's tender and prog
   Playford**, the rail authority and the growth-corridor community — TCL anchors us on the ground.
   [EVIDENCE]
 - **Kaurna** engagement done properly — design *with* Country, through TCL's SA relationships. [EVIDENCE]
-- **We've already delivered in SA (MF):** **Torrens to Darlington** — major transport
-  infrastructure in Adelaide, alongside **Karl Telfer**. MF is a known quantity here, not a
-  fly-in. [EVIDENCE]
+- **A team physically in Adelaide.** TCL leads the soft landscape from its **Adelaide office**;
+  MF has a **permanent staff member based in Adelaide**. Day-to-day, ACCIONA has us in the room —
+  not on a plane. [EVIDENCE]
+- **We've already delivered in SA (MF):** **design architect on Torrens to Darlington** — major
+  transport infrastructure in Adelaide, alongside **Karl Telfer**. MF is a known quantity here, not
+  a fly-in. [EVIDENCE]
 - **Karl Telfer — a shared, named Kaurna relationship:** worked with by *both* MF (T2D) and TCL
   (extensively). Proposed as our **Aboriginal urban design consultant** — continuity of trust, not
   a cold introduction. [EVIDENCE]
 - **National transport-infrastructure & LXR experience (MF):** lessons from inside major LXR
   programs — offered to *de-risk Adelaide's approach and adapt to it*, never to import a Melbourne
   template. [EVIDENCE]
-- **Interstate is not a gap — it's coverage.** TCL's Adelaide base + MF's SA track record + Karl
-  Telfer + a stated delivery model (Adelaide-based landscape lead, MF embedded via travel + the
-  shared model) means ACCIONA gets national depth *and* a local team in the room.
+- **Interstate is not a gap — it's coverage.** TCL's Adelaide office + MF's permanent Adelaide
+  staffer + MF's SA track record (T2D) + Karl Telfer means ACCIONA gets national depth *and* a
+  genuinely local team — the "Melbourne firm" question is already answered.
 - **Working with ACCIONA:** [prior ACCIONA collaboration — state honestly; if limited, note how we
   integrate into a head contractor's tender team]. *(Requirement 6.)*
 **IMAGE:** Stakeholder/engagement map centred on the site.
@@ -281,8 +285,8 @@ civil **engineering** sits with ACCIONA's engineers or a named subconsultant, an
 integrate with them. *(Requirement 7.)*
 **CALLOUTS:**
 - *Digital/parametric modelling in-house (MF) — the concept model you're looking at is ours.*
-- *Interstate delivery, solved: Adelaide-based landscape lead (TCL) + MF embedded via travel and the
-  shared model — national LXR depth with a local team in the room.*
+- *Interstate delivery, solved: TCL's Adelaide office + MF's permanent Adelaide staff member +
+  the shared digital model — national depth with a genuinely local team, not a fly-in.*
 
 ---
 
