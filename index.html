@@ -180,6 +180,14 @@
       <div class="row check"><input type="checkbox" id="showStreets" checked><label for="showStreets">OSM street network overlay</label></div>
       <div class="row"><label>Envelope opacity</label>
         <input type="range" id="bldgOpacity" min="0.2" max="1" step="0.05" value="0.92"><span class="val" id="bldgOpacityVal">0.92</span></div>
+      <div class="row"><label>Undercroft space</label>
+        <select id="undercroft">
+          <option value="skate" selected>Skate park</option>
+          <option value="play">Playground</option>
+          <option value="gym">Outdoor gym</option>
+          <option value="pump">Bike pump track</option>
+          <option value="none">Landscaping only</option>
+        </select></div>
       <div class="row check"><input type="checkbox" id="showTrain" checked><label for="showTrain">Animate Gawler line train</label></div>
       <div class="row check"><input type="checkbox" id="showCars" checked><label for="showCars">Animate road traffic</label></div>
       <div class="row"><label>Imagery shift E–W</label>
@@ -259,6 +267,7 @@ const params = {
   seasonDoy: 172,            // 21 June — worst-case winter shadows
   noise: false,
   noiseLevel: 68,            // LAeq at 10 m from the carriageway
+  undercroft: 'skate',
 };
 
 /* ---------------- renderer / scene / camera ---------------- */
@@ -1536,6 +1545,7 @@ function buildBridge() {
   /* street lighting along the structure */
   bridgeGroup.add(buildStreetLights());
 
+  buildUndercroft();
   if (params.noise) buildNoiseMap();
   updateStats();
 }
@@ -1675,6 +1685,172 @@ async function loadStreets(atLat, atLon) {
     streetsStatus = 'unavailable (' + (e.message || 'offline') + ')';
   }
   updateStats();
+}
+
+/* ---------------- undercroft activation (urban realm under the bridge) ---------------- */
+
+const undercroftGroup = new THREE.Group();
+scene.add(undercroftGroup);
+
+const UC = {
+  lawn:      new THREE.MeshStandardMaterial({ color: 0x6f9350, roughness: 1 }),
+  slab:      new THREE.MeshStandardMaterial({ color: 0xb9b6ae, roughness: 0.95 }),
+  softfall:  new THREE.MeshStandardMaterial({ color: 0xc98850, roughness: 1 }),
+  rubber:    new THREE.MeshStandardMaterial({ color: 0x5f7a63, roughness: 1 }),
+  teal:      new THREE.MeshStandardMaterial({ color: 0x00b2a9, roughness: 0.5 }),
+  gold:      new THREE.MeshStandardMaterial({ color: 0xffb81c, roughness: 0.5 }),
+  timber:    new THREE.MeshStandardMaterial({ color: 0x8a6844, roughness: 0.9 }),
+  track:     new THREE.MeshStandardMaterial({ color: 0x3f4245, roughness: 0.95 }),
+  trackEdge: new THREE.MeshStandardMaterial({ color: 0x8a4a32, roughness: 1 }),
+  canopy:    new THREE.MeshStandardMaterial({ color: 0x4d7c3a, roughness: 1 }),
+  trunk:     new THREE.MeshStandardMaterial({ color: 0x5c4632, roughness: 1 }),
+};
+
+const ucBox = (g, w, h, d, mat, x, y, z, ry = 0, rz = 0) => {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  m.position.set(x, y, z); m.rotation.y = ry; m.rotation.z = rz;
+  m.castShadow = true; g.add(m); return m;
+};
+const ucCyl = (g, r, h, mat, x, y, z, rx = 0, rz = 0, rTop = null) => {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(rTop === null ? r : rTop, r, h, 10), mat);
+  m.position.set(x, y, z); m.rotation.x = rx; m.rotation.z = rz;
+  m.castShadow = true; g.add(m); return m;
+};
+
+function ucQuarterPipe(g, x, z, ry) {
+  const s = new THREE.Shape();
+  s.moveTo(0, 0);
+  for (let i = 1; i <= 10; i++) {
+    const a = i / 10 * Math.PI / 2;
+    s.lineTo(2.0 * Math.sin(a), 2.0 * (1 - Math.cos(a)));
+  }
+  s.lineTo(2.0, 2.0); s.lineTo(2.7, 2.0); s.lineTo(2.7, 0); s.closePath();
+  const geo = new THREE.ExtrudeGeometry(s, { depth: 6, bevelEnabled: false });
+  geo.translate(0, 0, -3);
+  const m = new THREE.Mesh(geo, UC.slab);
+  m.position.set(x, 0.12, z); m.rotation.y = ry;
+  m.castShadow = true; g.add(m);
+}
+
+function ucSkatepark(g) {
+  ucBox(g, 30, 0.14, 15, UC.slab, 0, 0.07, 0);
+  ucQuarterPipe(g, -13.5, 0, -Math.PI / 2);            // ramps face each other
+  ucQuarterPipe(g, 13.5, 0, Math.PI / 2);
+  // grind rail
+  ucCyl(g, 0.05, 6, MAT.screenFrame, 0, 0.5, 4, 0, Math.PI / 2);
+  ucCyl(g, 0.05, 0.5, MAT.screenFrame, -2.7, 0.25, 4);
+  ucCyl(g, 0.05, 0.5, MAT.screenFrame, 2.7, 0.25, 4);
+  // fun box with wedges
+  ucBox(g, 4, 0.9, 3, UC.slab, 0, 0.6, -3);
+  ucBox(g, 2.4, 0.9, 3, UC.slab, -3, 0.28, -3, 0, 0.36);
+  ucBox(g, 2.4, 0.9, 3, UC.slab, 3, 0.28, -3, 0, -0.36);
+  ucBox(g, 3, 0.45, 1.2, UC.slab, 8, 0.35, 3.5);       // ledge
+}
+
+function ucPlayground(g) {
+  ucBox(g, 30, 0.12, 15, UC.softfall, 0, 0.07, 0);
+  // tower + slide
+  for (const px of [-1, 1]) for (const pz of [-1, 1]) ucCyl(g, 0.09, 2.0, UC.timber, -7 + px * 0.8, 1.0, 2 + pz * 0.8);
+  ucBox(g, 1.9, 0.12, 1.9, UC.timber, -7, 1.55, 2);
+  const roof = new THREE.Mesh(new THREE.ConeGeometry(1.5, 0.95, 4), UC.teal);
+  roof.position.set(-7, 2.6, 2); roof.rotation.y = Math.PI / 4; roof.castShadow = true; g.add(roof);
+  ucBox(g, 3.6, 0.1, 0.75, UC.gold, -4.4, 0.88, 2, 0, -0.42);   // slide
+  ucBox(g, 3.6, 0.16, 0.1, UC.teal, -4.4, 1.02, 2.42, 0, -0.42);
+  ucBox(g, 3.6, 0.16, 0.1, UC.teal, -4.4, 1.02, 1.58, 0, -0.42);
+  // swings
+  ucCyl(g, 0.07, 2.4, UC.teal, 1, 1.2, -3.5); ucCyl(g, 0.07, 2.4, UC.teal, 5.4, 1.2, -3.5);
+  ucCyl(g, 0.05, 4.4, UC.teal, 3.2, 2.35, -3.5, 0, Math.PI / 2);
+  for (const sx of [2.2, 4.2]) {
+    ucCyl(g, 0.015, 1.6, MAT.screenFrame, sx - 0.25, 1.5, -3.5);
+    ucCyl(g, 0.015, 1.6, MAT.screenFrame, sx + 0.25, 1.5, -3.5);
+    ucBox(g, 0.62, 0.05, 0.26, UC.gold, sx, 0.68, -3.5);
+  }
+  // springers
+  for (const [sx, sz] of [[8, 2.5], [10, 0.5]]) {
+    ucCyl(g, 0.07, 0.4, MAT.screenFrame, sx, 0.2, sz);
+    const b = new THREE.Mesh(new THREE.SphereGeometry(0.34, 10, 8), UC.gold);
+    b.position.set(sx, 0.68, sz); b.castShadow = true; g.add(b);
+  }
+}
+
+function ucGym(g) {
+  ucBox(g, 30, 0.12, 15, UC.rubber, 0, 0.07, 0);
+  // pull-up stations, two heights
+  for (const [gx, hh] of [[-9, 2.4], [-5.6, 1.9]]) {
+    ucCyl(g, 0.06, hh, UC.gold, gx, hh / 2, -2);
+    ucCyl(g, 0.06, hh, UC.gold, gx, hh / 2, -0.4);
+    ucCyl(g, 0.035, 1.6, MAT.screenFrame, gx, hh - 0.05, -1.2, Math.PI / 2);
+  }
+  // parallel bars
+  for (const bz of [2.6, 3.4]) {
+    ucCyl(g, 0.05, 1.3, UC.teal, -1.4, 0.65, bz); ucCyl(g, 0.05, 1.3, UC.teal, 1.4, 0.65, bz);
+    ucCyl(g, 0.035, 3.0, MAT.screenFrame, 0, 1.28, bz, 0, Math.PI / 2);
+  }
+  // incline sit-up bench + step boxes
+  ucBox(g, 1.7, 0.09, 0.5, UC.teal, 5, 0.62, -1.5, 0, 0.38);
+  ucCyl(g, 0.05, 0.8, UC.gold, 5.7, 0.4, -1.5);
+  ucBox(g, 1.2, 0.35, 1.2, UC.gold, 8, 0.28, 2);
+  ucBox(g, 1.2, 0.6, 1.2, UC.gold, 9.4, 0.4, 2);
+}
+
+function ucPumpTrack(g) {
+  const N = 160, a = 12.5, b = 6, pos = [], idx = [];
+  const yAt = t => 0.24 + 0.28 * (0.5 + 0.5 * Math.sin(4 * t));
+  const build = (width, yOff, mat) => {
+    pos.length = 0; idx.length = 0;
+    for (let i = 0; i <= N; i++) {
+      const t = i / N * Math.PI * 2;
+      const x = a * Math.cos(t), z = b * Math.sin(t);
+      const tx = -a * Math.sin(t), tz = b * Math.cos(t);
+      const L = Math.hypot(tx, tz) || 1;
+      const nx = -tz / L, nz = tx / L;
+      const y = yAt(t) + yOff;
+      pos.push(x - nx * width / 2, y, z - nz * width / 2, x + nx * width / 2, y, z + nz * width / 2);
+      if (i > 0) { const k = 2 * i; idx.push(k - 2, k, k + 1, k - 2, k + 1, k - 1); }
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos.slice(), 3));
+    geo.setIndex(idx.slice());
+    geo.computeVertexNormals();
+    const m = new THREE.Mesh(geo, mat);
+    m.castShadow = true; m.receiveShadow = true; g.add(m);
+  };
+  build(3.4, -0.08, UC.trackEdge);        // compacted shoulder
+  build(2.4, 0, UC.track);                // asphalt riding surface
+  const infill = new THREE.Mesh(new THREE.CircleGeometry(4.4, 24), UC.lawn);
+  infill.geometry.rotateX(-Math.PI / 2);
+  infill.position.y = 0.1; g.add(infill);
+}
+
+function buildUndercroft() {
+  disposeGroup(undercroftGroup);
+  // activation zone: south side of the western approach, partly shaded by the
+  // deck, clear of the rail corridor, piers and the Palina Ct underpass road
+  const sMid = Math.min(-46, derived.x0 - 2);
+  const f = roadFrame(sMid);
+  const LO = 22;                                     // lateral offset south of the road
+  const g = new THREE.Group();
+  g.position.set(f.x + f.nx * LO, 0, f.z + f.nz * LO);
+  g.rotation.y = Math.atan2(-f.tz, f.tx);
+  undercroftGroup.add(g);
+
+  // shared landscaping
+  ucBox(g, 38, 0.08, 22, UC.lawn, 0, 0.02, 0).receiveShadow = true;
+  for (const [tx, tz] of [[-17, -9], [-10, 9.2], [4, -9.3], [12, 9], [17, -8]]) {
+    ucCyl(g, 0.13, 1.7, UC.trunk, tx, 0.85, tz);
+    const c = new THREE.Mesh(new THREE.IcosahedronGeometry(1.7, 1), UC.canopy);
+    c.position.set(tx, 2.9, tz); c.castShadow = true; g.add(c);
+  }
+  for (const bx of [-14, 14]) {
+    ucBox(g, 1.8, 0.08, 0.55, UC.timber, bx, 0.5, 6.5);
+    ucBox(g, 0.14, 0.42, 0.5, MAT.screenFrame, bx - 0.7, 0.21, 6.5);
+    ucBox(g, 0.14, 0.42, 0.5, MAT.screenFrame, bx + 0.7, 0.21, 6.5);
+  }
+
+  if (params.undercroft === 'skate') ucSkatepark(g);
+  else if (params.undercroft === 'play') ucPlayground(g);
+  else if (params.undercroft === 'gym') ucGym(g);
+  else if (params.undercroft === 'pump') ucPumpTrack(g);
 }
 
 /* ---------------- indicative traffic noise contours ----------------
@@ -1924,6 +2100,7 @@ $('bldgOpacity').addEventListener('input', e => {
   $('bldgOpacityVal').textContent = (+e.target.value).toFixed(2);
   MAT.building.opacity = params.bldgOpacity;
 });
+$('undercroft').addEventListener('change', e => { params.undercroft = e.target.value; buildUndercroft(); });
 $('showTrain').addEventListener('change', e => {
   params.showTrain = e.target.checked;
   trainCars.forEach(c => c.visible = e.target.checked);
