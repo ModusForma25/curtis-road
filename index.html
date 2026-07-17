@@ -190,7 +190,8 @@
         <input type="range" id="bldgOpacity" min="0.2" max="1" step="0.05" value="0.92"><span class="val" id="bldgOpacityVal">0.92</span></div>
       <div class="row"><label>Undercroft space</label>
         <select id="undercroft">
-          <option value="skate" selected>Skate park</option>
+          <option value="mix" selected>Mixed uses (fill undercroft)</option>
+          <option value="skate">Skate park</option>
           <option value="play">Playground</option>
           <option value="gym">Outdoor gym</option>
           <option value="pump">Bike pump track</option>
@@ -276,7 +277,7 @@ const params = {
   seasonDoy: 172,            // 21 June — worst-case winter shadows
   noise: false,
   noiseLevel: 68,            // LAeq at 10 m from the carriageway
-  undercroft: 'skate',
+  undercroft: 'mix',
 };
 
 /* ---------------- renderer / scene / camera ---------------- */
@@ -1925,21 +1926,29 @@ function buildUndercroft() {
   }
   if (params.undercroft === 'none') return;
 
-  // the facility goes in the longest clear interval (no piers, no local roads)
-  let best = free[0];
-  for (const iv of free) if (iv[1] - iv[0] > best[1] - best[0]) best = iv;
-  if (!best || best[1] - best[0] < 10) return;
-  const L = best[1] - best[0];
-  const f = roadFrame((best[0] + best[1]) / 2);
-  const fac = new THREE.Group();
-  fac.position.set(f.x, 0, f.z);
-  fac.rotation.y = Math.atan2(-f.tz, f.tx);
-  fac.scale.setScalar(THREE.MathUtils.clamp(Math.min(L / 33, (W + 3) / 17), 0.45, 1));
-  undercroftGroup.add(fac);
-  if (params.undercroft === 'skate') ucSkatepark(fac);
-  else if (params.undercroft === 'play') ucPlayground(fac);
-  else if (params.undercroft === 'gym') ucGym(fac);
-  else if (params.undercroft === 'pump') ucPumpTrack(fac);
+  // fill EVERY clear interval (no piers, no local roads), splitting long bays
+  // into ~38 m slots so the whole undercroft hosts a mix of uses
+  const UC_BUILDERS = { skate: ucSkatepark, play: ucPlayground, gym: ucGym, pump: ucPumpTrack };
+  const mixOrder = ['skate', 'pump', 'play', 'gym'];
+  const slots = [];
+  for (const [a, b] of free) {
+    const L = b - a;
+    if (L < 10) continue;
+    const n = Math.max(1, Math.round(L / 38));
+    for (let i = 0; i < n; i++) slots.push([a + (i / n) * L, a + ((i + 1) / n) * L]);
+  }
+  slots.sort((p, q) => p[0] - q[0]);
+  slots.forEach(([a, b], i) => {
+    const L = b - a - 2;
+    const kind = params.undercroft === 'mix' ? mixOrder[i % mixOrder.length] : params.undercroft;
+    const f = roadFrame((a + b) / 2);
+    const fac = new THREE.Group();
+    fac.position.set(f.x, 0, f.z);
+    fac.rotation.y = Math.atan2(-f.tz, f.tx);
+    fac.scale.setScalar(THREE.MathUtils.clamp(Math.min(L / 33, (W + 3) / 17), 0.4, 1));
+    undercroftGroup.add(fac);
+    UC_BUILDERS[kind](fac);
+  });
 }
 
 /* ---------------- indicative traffic noise contours ----------------
