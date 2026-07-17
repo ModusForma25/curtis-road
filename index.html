@@ -449,6 +449,7 @@ const geoCross = { x: 0, z: 0 };      // crossing point in geo-local coords
 const site = { lat: CONFIG.center.lat, lon: CONFIG.center.lon };
 let siteStatus = 'aligning to OSM level-crossing node…';
 let buildingsSource = 'loading…';
+let alignTries = 0;
 
 function applyGeoOffset() {
   geoGroup.rotation.y = geoRot;
@@ -744,20 +745,31 @@ const OVERPASS_URLS = [
 ];
 const opCacheKey = n => `clxr1.${n}.${CONFIG.center.lat.toFixed(3)},${CONFIG.center.lon.toFixed(3)}`;
 
+async function fetchT(url, opts, ms) {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), ms);
+  try { return await fetch(url, { ...opts, signal: ctl.signal }); }
+  finally { clearTimeout(t); }
+}
+
 async function overpass(q, cacheKey) {
-  for (let round = 0; round < 2; round++) {
+  // busy Overpass servers HANG rather than reject — hard per-request timeout
+  // plus an overall deadline so the app never sits on "aligning…" forever
+  const deadline = Date.now() + 32000;
+  for (let round = 0; round < 2 && Date.now() < deadline; round++) {
     for (const url of OVERPASS_URLS) {
+      if (Date.now() >= deadline) break;
       try {
-        const res = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(q) });
+        const res = await fetchT(url, { method: 'POST', body: 'data=' + encodeURIComponent(q) }, 11000);
         if (!res.ok) continue;
         const json = await res.json();
         if (cacheKey) {
           try { localStorage.setItem(cacheKey, JSON.stringify({ t: Date.now(), json })); } catch (e) {}
         }
         return json;
-      } catch (e) { /* try the next mirror */ }
+      } catch (e) { /* timed out or refused — try the next mirror */ }
     }
-    await new Promise(r => setTimeout(r, 2000));
+    await new Promise(r => setTimeout(r, 1500));
   }
   if (cacheKey) {
     try {
@@ -928,8 +940,14 @@ way["railway"="rail"](around.x:900)->.rw;
         : `⚠ crossing pinned; ${roadCurved ? '' : 'road '}${!roadCurved && !railCurved ? '+ ' : ''}${railCurved ? '' : 'rail '}on straight fallback`);
   } catch (e) {
     siteStatus = `⚠ OSM alignment unavailable (${e.message || 'offline'}) — model on approximate straight ` +
-      'alignment and may sit off the imagery. Reload in a minute to re-align.';
-    setAlignChip('bad', '⚠ NOT aligned — OSM unavailable, model on approximate coordinates. Reload in a minute.');
+      'alignment and may sit off the imagery.';
+    alignTries++;
+    if (alignTries < 4) {
+      setAlignChip('bad', `⚠ not aligned — OSM busy, retrying automatically (${alignTries}/3)…`);
+      setTimeout(alignSite, 20000);
+    } else {
+      setAlignChip('bad', '⚠ NOT aligned — OSM unreachable, model on approximate coordinates. Reload later.');
+    }
   }
   updateStats();
   buildSatellite(site.lat, site.lon);
@@ -1621,6 +1639,9 @@ function buildConnectors(named) {
   const mid = { x: (admiral.x + end.x) / 2, z: Math.min(admiral.z, end.z) - 35 };
   contextGroup.add(groundRoad([admiral, mid, end], 7));
   if (!named.admiral) contextGroup.add(groundRoad([{ x: -340, z: 2 }, { x: -340, z: -300 }], 7));
+
+  ucLinkCrossings = [eOff, wOff];      // undercroft keeps clear of the underpass roads
+  buildUndercroft();
 }
 
 function streetWidth(tags) {
@@ -1841,55 +1862,80 @@ function ucPumpTrack(g) {
   infill.position.y = 0.1; g.add(infill);
 }
 
+let ucLinkCrossings = [26, -22];        // where the underpass roads cross the deck line
+                                        // (rail-normal offsets; updated by buildConnectors)
+
+function ucFreeIntervals(a, b, obs) {
+  let list = [[a, b]];
+  for (const [o0, o1] of obs) {
+    const next = [];
+    for (const [s0, s1] of list) {
+      if (o1 <= s0 || o0 >= s1) { next.push([s0, s1]); continue; }
+      if (o0 - s0 > 2) next.push([s0, o0]);
+      if (s1 - o1 > 2) next.push([o1, s1]);
+    }
+    list = next;
+  }
+  return list;
+}
+
 function buildUndercroft() {
   disposeGroup(undercroftGroup);
-  // Directly UNDER the deck: the bay on the western side between the abutment
-  // and the rail clear zone / Palina Ct underpass road, avoiding pier columns.
-  const railClear = 16 / Math.cos(railB) + 12;
-  const z0 = derived.x0 + 2.5;
-  const z1 = Math.min(-railClear - 2, -29);
-  const spans = params.spanLengths.slice(0, params.spanCount);
-  const piers = [];
-  let c = derived.x0;
-  for (let i = 0; i < spans.length - 1; i++) {
-    c += spans[i];
-    if (c > z0 && c < z1) piers.push(c);
-  }
-  const bounds = [z0, ...piers.sort((a, b) => a - b), z1];
-  let best = [z0, z1];
-  for (let i = 0; i + 1 < bounds.length; i++) {
-    const a = bounds[i] + (i === 0 ? 0 : 2.6);                        // keep off pier columns
-    const b = bounds[i + 1] - (i + 2 === bounds.length ? 0 : 2.6);
-    if (i === 0 || b - a > best[1] - best[0]) best = [a, b];
-  }
-  const L = Math.max(14, best[1] - best[0]);
-  const sMid = (best[0] + best[1]) / 2;
   const W = derived.deckWidth;
-  const f = roadFrame(sMid);
-  const g = new THREE.Group();
-  g.position.set(f.x, 0, f.z);                       // centred beneath the deck
-  g.rotation.y = Math.atan2(-f.tz, f.tx);
-  undercroftGroup.add(g);
+  const railClear = 16 / Math.cos(railB) + 12;
+  // continuous under every span, both sides, except the rail corridor
+  const bays = [
+    [derived.x0 + 2, -railClear],
+    [railClear, derived.x1 - 2],
+  ].filter(bb => bb[1] - bb[0] > 8);
+  if (!bays.length) return;
 
-  // lawn apron a little wider than the deck so its edges get sun
-  ucBox(g, L, 0.08, W + 8, UC.lawn, 0, 0.02, 0).receiveShadow = true;
-  // trees on the sunny strips just outside the deck edges
-  for (const [tx, tz] of [[-L * 0.36, -(W / 2 + 2.6)], [L * 0.1, W / 2 + 2.7],
-                          [L * 0.36, -(W / 2 + 2.4)], [-L * 0.1, W / 2 + 2.5]]) {
-    ucCyl(g, 0.13, 1.7, UC.trunk, tx, 0.85, tz);
-    const cn = new THREE.Mesh(new THREE.IcosahedronGeometry(1.6, 1), UC.canopy);
-    cn.position.set(tx, 2.8, tz); cn.castShadow = true; g.add(cn);
-  }
-  for (const bx of [-L * 0.28, L * 0.28]) {
-    ucBox(g, 1.8, 0.08, 0.55, UC.timber, bx, 0.5, W / 2 + 1.6);
-    ucBox(g, 0.14, 0.42, 0.5, MAT.screenFrame, bx - 0.7, 0.21, W / 2 + 1.6);
-    ucBox(g, 0.14, 0.42, 0.5, MAT.screenFrame, bx + 0.7, 0.21, W / 2 + 1.6);
+  // obstructions within the bays: pier columns + the underpass local roads
+  const spans = params.spanLengths.slice(0, params.spanCount);
+  const obs = [];
+  let c = derived.x0;
+  for (let i = 0; i < spans.length - 1; i++) { c += spans[i]; obs.push([c - 2.8, c + 2.8]); }
+  for (const off of ucLinkCrossings) {
+    const x = off / Math.cos(railB);
+    obs.push([x - 6, x + 6]);
   }
 
-  // the facility itself, uniformly scaled to fit the available bay
+  const free = [];
+  for (const [a, b] of bays) {
+    // lawn ribbon follows the curved deck through the whole bay
+    undercroftGroup.add(pathRibbon(roadPath, a, b, W + 8, 0, () => 0.02, UC.lawn, 4));
+    // trees + benches along the sunny strips outside the deck edges
+    let side = 1, benchCount = 0;
+    for (let s = a + 6; s <= b - 4; s += 13) {
+      const f = roadFrame(s);
+      const zo = side * (W / 2 + 2.6);
+      ucCyl(undercroftGroup, 0.13, 1.7, UC.trunk, f.x + f.nx * zo, 0.85, f.z + f.nz * zo);
+      const cn = new THREE.Mesh(new THREE.IcosahedronGeometry(1.6, 1), UC.canopy);
+      cn.position.set(f.x + f.nx * zo, 2.8, f.z + f.nz * zo);
+      cn.castShadow = true;
+      undercroftGroup.add(cn);
+      if (benchCount++ % 2 === 1) {
+        const zb = -side * (W / 2 + 1.7);
+        const bench = ucBox(undercroftGroup, 1.8, 0.08, 0.55, UC.timber, f.x + f.nx * zb, 0.5, f.z + f.nz * zb);
+        bench.rotation.y = Math.atan2(-f.tz, f.tx);
+      }
+      side = -side;
+    }
+    free.push(...ucFreeIntervals(a, b, obs));
+  }
+  if (params.undercroft === 'none') return;
+
+  // the facility goes in the longest clear interval (no piers, no local roads)
+  let best = free[0];
+  for (const iv of free) if (iv[1] - iv[0] > best[1] - best[0]) best = iv;
+  if (!best || best[1] - best[0] < 10) return;
+  const L = best[1] - best[0];
+  const f = roadFrame((best[0] + best[1]) / 2);
   const fac = new THREE.Group();
+  fac.position.set(f.x, 0, f.z);
+  fac.rotation.y = Math.atan2(-f.tz, f.tx);
   fac.scale.setScalar(THREE.MathUtils.clamp(Math.min(L / 33, (W + 3) / 17), 0.45, 1));
-  g.add(fac);
+  undercroftGroup.add(fac);
   if (params.undercroft === 'skate') ucSkatepark(fac);
   else if (params.undercroft === 'play') ucPlayground(fac);
   else if (params.undercroft === 'gym') ucGym(fac);
