@@ -71,6 +71,14 @@
   #stats b { color: var(--text); }
   #warn { color: #ff6b6b; font-weight: 600; display: none; margin-top: 4px; }
 
+  #alignChip {
+    position: fixed; left: 12px; bottom: 8px; z-index: 10; font-size: 11px; color: var(--text);
+    background: rgba(0,0,0,.55); padding: 4px 10px; border-radius: 5px; max-width: 46%;
+    border-left: 3px solid #888;
+  }
+  #alignChip.ok { border-left-color: #58b368; }
+  #alignChip.warn { border-left-color: #e8a33d; }
+  #alignChip.bad { border-left-color: #d9534f; }
   #attrib {
     position: fixed; right: 8px; bottom: 6px; z-index: 10; color: rgba(255,255,255,.65);
     font-size: 10px; background: rgba(0,0,0,.45); padding: 3px 8px; border-radius: 4px; max-width: 60%;
@@ -207,6 +215,7 @@
   <button data-view="path">⬡ Shared-use path</button>
 </div>
 
+<div id="alignChip">aligning to OSM…</div>
 <div id="attrib">Imagery © Esri, Maxar, Earthstar Geographics • Buildings &amp; alignments © OpenStreetMap contributors • Concept per DIT SA Curtis Road LXR project</div>
 
 <script type="importmap">
@@ -820,6 +829,12 @@ async function loadBuildings(atLat, atLon) {
 
 /* ---------------- georeference + alignment fetch ---------------- */
 
+function setAlignChip(cls, text) {
+  const chip = document.getElementById('alignChip');
+  chip.className = cls;
+  chip.textContent = text;
+}
+
 function rawBearing(a, b) {
   const dLat = b.lat - a.lat;
   const dLon = (b.lon - a.lon) * Math.cos((a.lat + b.lat) / 2 * DEG);
@@ -893,7 +908,7 @@ way["railway"="rail"](around.x:900)->.rw;
     const roadChain = stitchWays(mainRoadWays);
     if (roadChain) {
       const p = orientPath(makePath(roadChain), 1, 0);
-      if (pathSane(p, 1, 0, 280)) { roadPath = p; roadCurved = true; }
+      if (pathSane(p, 1, 0, 260, 42)) { roadPath = p; roadCurved = true; }
     }
     const railChain = stitchWays(railWays);
     if (railChain) {
@@ -908,9 +923,13 @@ way["railway"="rail"](around.x:900)->.rw;
     siteStatus = `OSM crossing pinned, imagery rotated ${rotDeg.toFixed(1)}°, rail skew ${(railB / DEG).toFixed(1)}° · ` +
       `road ${roadCurved ? 'follows mapped centreline' : 'straight (centreline rejected)'}; ` +
       `rail ${railCurved ? 'follows mapped centreline' : 'straight (centreline rejected)'}`;
+    setAlignChip(roadCurved && railCurved ? 'ok' : 'warn',
+      roadCurved && railCurved ? '✓ aligned to OSM crossing + centrelines'
+        : `⚠ crossing pinned; ${roadCurved ? '' : 'road '}${!roadCurved && !railCurved ? '+ ' : ''}${railCurved ? '' : 'rail '}on straight fallback`);
   } catch (e) {
     siteStatus = `⚠ OSM alignment unavailable (${e.message || 'offline'}) — model on approximate straight ` +
       'alignment and may sit off the imagery. Reload in a minute to re-align.';
+    setAlignChip('bad', '⚠ NOT aligned — OSM unavailable, model on approximate coordinates. Reload in a minute.');
   }
   updateStats();
   buildSatellite(site.lat, site.lon);
@@ -1824,33 +1843,57 @@ function ucPumpTrack(g) {
 
 function buildUndercroft() {
   disposeGroup(undercroftGroup);
-  // activation zone: south side of the western approach, partly shaded by the
-  // deck, clear of the rail corridor, piers and the Palina Ct underpass road
-  const sMid = Math.min(-46, derived.x0 - 2);
+  // Directly UNDER the deck: the bay on the western side between the abutment
+  // and the rail clear zone / Palina Ct underpass road, avoiding pier columns.
+  const railClear = 16 / Math.cos(railB) + 12;
+  const z0 = derived.x0 + 2.5;
+  const z1 = Math.min(-railClear - 2, -29);
+  const spans = params.spanLengths.slice(0, params.spanCount);
+  const piers = [];
+  let c = derived.x0;
+  for (let i = 0; i < spans.length - 1; i++) {
+    c += spans[i];
+    if (c > z0 && c < z1) piers.push(c);
+  }
+  const bounds = [z0, ...piers.sort((a, b) => a - b), z1];
+  let best = [z0, z1];
+  for (let i = 0; i + 1 < bounds.length; i++) {
+    const a = bounds[i] + (i === 0 ? 0 : 2.6);                        // keep off pier columns
+    const b = bounds[i + 1] - (i + 2 === bounds.length ? 0 : 2.6);
+    if (i === 0 || b - a > best[1] - best[0]) best = [a, b];
+  }
+  const L = Math.max(14, best[1] - best[0]);
+  const sMid = (best[0] + best[1]) / 2;
+  const W = derived.deckWidth;
   const f = roadFrame(sMid);
-  const LO = 22;                                     // lateral offset south of the road
   const g = new THREE.Group();
-  g.position.set(f.x + f.nx * LO, 0, f.z + f.nz * LO);
+  g.position.set(f.x, 0, f.z);                       // centred beneath the deck
   g.rotation.y = Math.atan2(-f.tz, f.tx);
   undercroftGroup.add(g);
 
-  // shared landscaping
-  ucBox(g, 38, 0.08, 22, UC.lawn, 0, 0.02, 0).receiveShadow = true;
-  for (const [tx, tz] of [[-17, -9], [-10, 9.2], [4, -9.3], [12, 9], [17, -8]]) {
+  // lawn apron a little wider than the deck so its edges get sun
+  ucBox(g, L, 0.08, W + 8, UC.lawn, 0, 0.02, 0).receiveShadow = true;
+  // trees on the sunny strips just outside the deck edges
+  for (const [tx, tz] of [[-L * 0.36, -(W / 2 + 2.6)], [L * 0.1, W / 2 + 2.7],
+                          [L * 0.36, -(W / 2 + 2.4)], [-L * 0.1, W / 2 + 2.5]]) {
     ucCyl(g, 0.13, 1.7, UC.trunk, tx, 0.85, tz);
-    const c = new THREE.Mesh(new THREE.IcosahedronGeometry(1.7, 1), UC.canopy);
-    c.position.set(tx, 2.9, tz); c.castShadow = true; g.add(c);
+    const cn = new THREE.Mesh(new THREE.IcosahedronGeometry(1.6, 1), UC.canopy);
+    cn.position.set(tx, 2.8, tz); cn.castShadow = true; g.add(cn);
   }
-  for (const bx of [-14, 14]) {
-    ucBox(g, 1.8, 0.08, 0.55, UC.timber, bx, 0.5, 6.5);
-    ucBox(g, 0.14, 0.42, 0.5, MAT.screenFrame, bx - 0.7, 0.21, 6.5);
-    ucBox(g, 0.14, 0.42, 0.5, MAT.screenFrame, bx + 0.7, 0.21, 6.5);
+  for (const bx of [-L * 0.28, L * 0.28]) {
+    ucBox(g, 1.8, 0.08, 0.55, UC.timber, bx, 0.5, W / 2 + 1.6);
+    ucBox(g, 0.14, 0.42, 0.5, MAT.screenFrame, bx - 0.7, 0.21, W / 2 + 1.6);
+    ucBox(g, 0.14, 0.42, 0.5, MAT.screenFrame, bx + 0.7, 0.21, W / 2 + 1.6);
   }
 
-  if (params.undercroft === 'skate') ucSkatepark(g);
-  else if (params.undercroft === 'play') ucPlayground(g);
-  else if (params.undercroft === 'gym') ucGym(g);
-  else if (params.undercroft === 'pump') ucPumpTrack(g);
+  // the facility itself, uniformly scaled to fit the available bay
+  const fac = new THREE.Group();
+  fac.scale.setScalar(THREE.MathUtils.clamp(Math.min(L / 33, (W + 3) / 17), 0.45, 1));
+  g.add(fac);
+  if (params.undercroft === 'skate') ucSkatepark(fac);
+  else if (params.undercroft === 'play') ucPlayground(fac);
+  else if (params.undercroft === 'gym') ucGym(fac);
+  else if (params.undercroft === 'pump') ucPumpTrack(fac);
 }
 
 /* ---------------- indicative traffic noise contours ----------------
