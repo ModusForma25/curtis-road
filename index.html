@@ -714,21 +714,40 @@ function updateSun() {
   scene.fog.color = sky;
 }
 
-/* ---------------- Overpass helper (rate-limit aware) ---------------- */
+/* ---------------- Overpass helper (mirrors + local cache) ----------------
+   Rate limits or an outage on one server must never de-align the model:
+   try several public mirrors, and cache each successful response in
+   localStorage so page reloads re-align instantly and offline. */
 
-async function overpass(q, tries = 2) {
-  for (let i = 0; i < tries; i++) {
-    try {
-      const res = await fetch('https://overpass-api.de/api/interpreter',
-        { method: 'POST', body: 'data=' + encodeURIComponent(q) });
-      if (res.ok) return await res.json();
-      if (res.status !== 429 && res.status !== 504) throw new Error(res.status);
-    } catch (e) {
-      if (i === tries - 1) throw e;
+const OVERPASS_URLS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter',
+];
+const opCacheKey = n => `clxr1.${n}.${CONFIG.center.lat.toFixed(3)},${CONFIG.center.lon.toFixed(3)}`;
+
+async function overpass(q, cacheKey) {
+  for (let round = 0; round < 2; round++) {
+    for (const url of OVERPASS_URLS) {
+      try {
+        const res = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(q) });
+        if (!res.ok) continue;
+        const json = await res.json();
+        if (cacheKey) {
+          try { localStorage.setItem(cacheKey, JSON.stringify({ t: Date.now(), json })); } catch (e) {}
+        }
+        return json;
+      } catch (e) { /* try the next mirror */ }
     }
-    await new Promise(r => setTimeout(r, 2500));
+    await new Promise(r => setTimeout(r, 2000));
   }
-  throw new Error('overpass unavailable');
+  if (cacheKey) {
+    try {
+      const hit = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+      if (hit && hit.json) return hit.json;    // stale is fine — this geometry barely changes
+    } catch (e) {}
+  }
+  throw new Error('OSM services busy');
 }
 
 /* ---------------- building envelopes ---------------- */
@@ -769,7 +788,7 @@ function proceduralBuildings() {
 async function loadBuildings(atLat, atLon) {
   const q = `[out:json][timeout:25];(way["building"](around:750,${atLat},${atLon}););out geom;`;
   try {
-    const json = await overpass(q);
+    const json = await overpass(q, opCacheKey('bldg'));
     let count = 0;
     for (const el of json.elements || []) {
       if (!el.geometry || el.geometry.length < 4) continue;
@@ -818,7 +837,7 @@ way["railway"="rail"](around.x:900)->.rw;
 .rw out geom;
 .cr out geom;`;
   try {
-    const json = await overpass(q);
+    const json = await overpass(q, opCacheKey('align'));
     const nodes = (json.elements || []).filter(e => e.type === 'node');
     const ways = (json.elements || []).filter(e => e.type === 'way' && e.geometry);
     const railWays = ways.filter(w => w.tags && w.tags.railway);
@@ -881,7 +900,8 @@ way["railway"="rail"](around.x:900)->.rw;
       `road ${roadCurved ? 'follows mapped centreline' : 'straight (centreline rejected)'}; ` +
       `rail ${railCurved ? 'follows mapped centreline' : 'straight (centreline rejected)'}`;
   } catch (e) {
-    siteStatus = 'approximate (offline) — straight alignments; fine-tune with the imagery shift sliders';
+    siteStatus = `⚠ OSM alignment unavailable (${e.message || 'offline'}) — model on approximate straight ` +
+      'alignment and may sit off the imagery. Reload in a minute to re-align.';
   }
   updateStats();
   buildSatellite(site.lat, site.lon);
@@ -1609,7 +1629,7 @@ function makeStreetLabel(text) {
 async function loadStreets(atLat, atLon) {
   const q = `[out:json][timeout:25];way["highway"](around:650,${atLat},${atLon});out geom;`;
   try {
-    const json = await overpass(q);
+    const json = await overpass(q, opCacheKey('streets'));
     disposeGroup(streetsGroup);
     const named = {};
     const nameKeys = { charlotte: /charlotte/i, alawoona: /alawoona/i, palina: /palina/i, admiral: /admiral/i };
