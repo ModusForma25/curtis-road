@@ -476,6 +476,15 @@ function geoToModel(x, z) {
 function makePath(raw) {
   // raw: ordered [{x,z}] in model coords. Resampled; arc-length parameterised
   // with s = 0 at the point closest to the origin (the crossing).
+  // Guard degenerate input — OSM occasionally contains zero-length ways whose
+  // repeated points would otherwise produce NaN frames.
+  const cleaned = [raw[0]];
+  for (let i = 1; i < raw.length; i++) {
+    const p = raw[i], q = cleaned[cleaned.length - 1];
+    if (Math.hypot(p.x - q.x, p.z - q.z) > 0.05) cleaned.push(p);
+  }
+  if (cleaned.length < 2) cleaned.push({ x: cleaned[0].x + 1, z: cleaned[0].z });
+  raw = cleaned;
   const cumR = [0];
   for (let i = 1; i < raw.length; i++) {
     cumR.push(cumR[i - 1] + Math.hypot(raw[i].x - raw[i - 1].x, raw[i].z - raw[i - 1].z));
@@ -1703,9 +1712,11 @@ async function loadStreets(atLat, atLon) {
         if (!prev || dd < prev.dd) labelBest.set(nm, { mid, dd });
       }
       if (crossingRoadName && nm === crossingRoadName) continue;   // the model draws Curtis Rd itself
-      const p = makePath(ptsGeo);
-      streetsGroup.add(pathRibbon(p, p.sMin, p.sMax, w, 0, () => 0.015, MAT.linkRoad, 8));
-      count++;
+      try {
+        const p = makePath(ptsGeo);
+        streetsGroup.add(pathRibbon(p, p.sMin, p.sMax, w, 0, () => 0.015, MAT.linkRoad, 8));
+        count++;
+      } catch (err) { /* one malformed way must not kill the rest */ }
     }
     for (const [nm, info] of labelBest) {
       if (info.dd > 480) continue;
