@@ -1613,6 +1613,75 @@ function railOffsetPt(s, off) {
 /* new ground-level connections per the proposed-treatments plan. When OSM
    street data is available the connectors snap to the real ends of
    Charlotte St, Alawoona Rd, Palina Ct and Admiral Pde. */
+// wombat crossing surface: white bar markings on asphalt
+const wombatTex = makeCanvasTex((g, w, h) => {
+  g.fillStyle = '#3c3f42'; g.fillRect(0, 0, w, h);
+  g.fillStyle = '#e8e8e8';
+  for (let x = 8; x < w; x += 40) g.fillRect(x, 6, 20, h - 12);
+}, 256, 128, 1, 1);
+MAT.wombat = new THREE.MeshStandardMaterial({ map: wombatTex, roughness: 0.9 });
+
+function kerbRun(p, off, s0, s1) {
+  const seg = 4;
+  const n = Math.max(1, Math.floor((s1 - s0) / seg));
+  const geo = new THREE.BoxGeometry(seg * 1.04, 0.3, 0.32);
+  geo.translate(seg / 2, 0, 0);
+  const inst = new THREE.InstancedMesh(geo, MAT.barrier, n);
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1), v = new THREE.Vector3();
+  const up = new THREE.Vector3(0, 1, 0);
+  for (let i = 0; i < n; i++) {
+    const s = s0 + i * seg;
+    const f = p.frame(s);
+    q.setFromAxisAngle(up, Math.atan2(-f.tz, f.tx));
+    v.set(f.x + f.nx * off, 0.1, f.z + f.nz * off);
+    m4.compose(v, q, one);
+    inst.setMatrixAt(i, m4);
+  }
+  inst.castShadow = true;
+  return inst;
+}
+
+/* a properly modelled ground-level civil road: kerbed carriageway with
+   markings, grass verge, shared-use path, street lighting and a wombat
+   crossing — the plan's standard treatment for the new local roads */
+function buildCivilRoad(pts) {
+  const p = makePath(pts);
+  const g = new THREE.Group();
+  const a = p.sMin + 1, b = p.sMax - 1;
+  g.add(pathRibbon(p, a, b, 9.6, 0, () => 0.08, MAT.concreteLt, 5));    // channel / formation
+  g.add(pathRibbon(p, a, b, 7.0, 0, () => 0.14, MAT.asphalt, 5));
+  g.add(kerbRun(p, -4.15, a, b));
+  g.add(kerbRun(p, 4.15, a, b));
+  g.add(pathRibbon(p, a, b, 2.2, 5.4, () => 0.06, MAT.embankment, 5));  // verge
+  g.add(pathRibbon(p, a, b, 2.5, 7.1, () => 0.12, MAT.path, 5));        // shared-use path
+  const headMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, emissive: 0xfff7d0, emissiveIntensity: 0.5 });
+  for (let s = a + 18; s < b - 10; s += 45) {
+    const f = p.frame(s);
+    const zP = -5.0;
+    const px = f.x + f.nx * zP, pz = f.z + f.nz * zP;
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.09, 7.5, 8), MAT.mast);
+    pole.position.set(px, 3.75, pz);
+    pole.castShadow = true;
+    const armOff = zP + 1.1;
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 2.2), MAT.mast);
+    arm.position.set(f.x + f.nx * armOff, 7.3, f.z + f.nz * armOff);
+    arm.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(f.nx, f.nz));
+    const headOff = zP + 2.0;
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.1, 0.7), headMat);
+    head.position.set(f.x + f.nx * headOff, 7.24, f.z + f.nz * headOff);
+    g.add(pole, arm, head);
+  }
+  // wombat crossing mid-length (safe crossing point for the shared-use paths)
+  const sw = (a + b) / 2;
+  const fw = p.frame(sw);
+  const wc = new THREE.Mesh(new THREE.BoxGeometry(4, 0.16, 8.4), MAT.wombat);
+  wc.position.set(fw.x, 0.12, fw.z);
+  wc.rotation.y = Math.atan2(-fw.tz, fw.tx);
+  wc.receiveShadow = true;
+  g.add(wc);
+  return g;
+}
+
 /* New local road connections, digitised from the DIT proposed-treatments plan
    (100 m scale bar; coordinates relative to the crossing, +x east, +z south).
    End points snap to the mapped OSM street ends when available. */
@@ -1621,22 +1690,18 @@ function buildConnectors(named) {
   named = named || {};
   const eOff = 18, wOff = -18;         // underpass offsets from the rail centreline
 
-  // new civil roads render with full asphalt + markings and a shared-use path
-  // alongside, so they read as project works rather than context streets
-  const newRoad = pts => {
-    const p = makePath(pts);
-    const g = new THREE.Group();
-    g.add(pathRibbon(p, p.sMin, p.sMax, 7.5, 0, () => 0.035, MAT.asphalt, 5));
-    g.add(pathRibbon(p, p.sMin, p.sMax, 2.5, 6.2, () => 0.045, MAT.path, 5));
-    return g;
-  };
+  const newRoad = buildCivilRoad;
 
   // Charlotte Street → Alawoona Road: curls off Charlotte's north end, passes
   // under the overpass hugging the east side of the rail, into Alawoona's south end
-  const ch = named.charlotte || railOffsetPt(-85, 55);
-  const al = named.alawoona || railOffsetPt(52, 26);
-  const sC = railPath.nearest(ch.x, ch.z).s;
-  const sA = railPath.nearest(al.x, al.z).s;
+  let ch = named.charlotte || railOffsetPt(-85, 55);
+  let al = named.alawoona || railOffsetPt(52, 26);
+  let sC = railPath.nearest(ch.x, ch.z).s;
+  let sA = railPath.nearest(al.x, al.z).s;
+  if (Math.abs(sA - sC) < 60) {        // degenerate snap — use the plan geometry
+    ch = railOffsetPt(-85, 55); al = railOffsetPt(52, 26);
+    sC = -85; sA = 52;
+  }
   try {
     contextGroup.add(newRoad([
       ch,
@@ -1709,11 +1774,18 @@ async function loadStreets(atLat, atLon) {
       if (el.type !== 'way' || !el.geometry || el.geometry.length < 2 || !el.tags) continue;
       const nm = el.tags.name || '';
       const ptsGeo = el.geometry.map(g => lonLatToLocal(g.lon, g.lat));
-      // collect named end-points nearest the crossing for the connectors
+      // collect named end-points for the connectors: the vertex nearest the
+      // crossing that is CLEAR of the Curtis Rd corridor (these streets junction
+      // with Curtis today, and snapping to that junction collapses the connector)
       for (const k in nameKeys) if (nameKeys[k].test(nm)) {
         for (const p of ptsGeo) {
           const m = geoToModel(p.x, p.z);
-          if (!named[k] || Math.hypot(m.x, m.z) < Math.hypot(named[k].x, named[k].z)) named[k] = m;
+          const clear = roadPath.nearest(m.x, m.z).dist > 30;
+          const d = Math.hypot(m.x, m.z);
+          const cur = named[k];
+          if (!cur || (clear && !cur.clear) || (clear === !!cur.clear && d < cur.d)) {
+            named[k] = { x: m.x, z: m.z, d, clear };
+          }
         }
       }
       const w = streetWidth(el.tags);
