@@ -1603,43 +1603,38 @@ function railOffsetPt(s, off) {
 /* new ground-level connections per the proposed-treatments plan. When OSM
    street data is available the connectors snap to the real ends of
    Charlotte St, Alawoona Rd, Palina Ct and Admiral Pde. */
+/* New local road connections, digitised from the DIT proposed-treatments plan
+   (100 m scale bar; coordinates relative to the crossing, +x east, +z south).
+   End points snap to the mapped OSM street ends when available. */
 function buildConnectors(named) {
   disposeGroup(contextGroup);
   named = named || {};
-  const sideOff = (p, n) => {
-    const f = railFrame(n.s);
-    return (p.x - f.x) * f.nx + (p.z - f.z) * f.nz;
-  };
+  const eOff = 18, wOff = -18;         // underpass offsets from the rail centreline
 
-  // east of rail: Charlotte Street ↔ Alawoona Road under the overpass
-  let e0 = -280, e1 = 280, eOff = 26;
-  if (named.charlotte && named.alawoona) {
-    const nC = railPath.nearest(named.charlotte.x, named.charlotte.z);
-    const nA = railPath.nearest(named.alawoona.x, named.alawoona.z);
-    e0 = Math.min(nC.s, nA.s); e1 = Math.max(nC.s, nA.s);
-    eOff = THREE.MathUtils.clamp((sideOff(named.charlotte, nC) + sideOff(named.alawoona, nA)) / 2, 16, 34);
-    contextGroup.add(groundRoad([named.charlotte, railOffsetPt(e0 + 8, eOff)], 6.5));
-    contextGroup.add(groundRoad([named.alawoona, railOffsetPt(e1 - 8, eOff)], 6.5));
-  }
-  contextGroup.add(pathRibbon(railPath, e0, e1, 7, eOff, () => 0.03, MAT.linkRoad, 6));
+  // Charlotte Street → Alawoona Road: curls off Charlotte's north end, passes
+  // under the overpass hugging the east side of the rail, into Alawoona's south end
+  const ch = named.charlotte || railOffsetPt(-85, 55);
+  const al = named.alawoona || railOffsetPt(52, 26);
+  const sC = railPath.nearest(ch.x, ch.z).s;
+  const sA = railPath.nearest(al.x, al.z).s;
+  contextGroup.add(groundRoad([
+    ch,
+    railOffsetPt(sC + (sA - sC) * 0.35, eOff),
+    railOffsetPt(sC + (sA - sC) * 0.65, eOff),
+    al,
+  ], 7));
 
-  // west of rail: new link road ↔ Palina Court under the overpass
-  let w0 = -220, w1 = 190, wOff = -22;
-  if (named.palina) {
-    const nP = railPath.nearest(named.palina.x, named.palina.z);
-    w0 = Math.min(nP.s, -40);
-    wOff = THREE.MathUtils.clamp(sideOff(named.palina, nP), -34, -16);
-    contextGroup.add(groundRoad([named.palina, railOffsetPt(w0 + 8, wOff)], 6.5));
-  }
-  contextGroup.add(pathRibbon(railPath, w0, w1, 7, wOff, () => 0.03, MAT.linkRoad, 6));
-
-  // new link road from the Admiral Parade / Playford Alive East connection,
-  // curving east to meet the west underpass road north of the bridge
-  const admiral = named.admiral || { x: -340, z: -18 };
-  const end = railOffsetPt(w1 - 6, wOff);
-  const mid = { x: (admiral.x + end.x) / 2, z: Math.min(admiral.z, end.z) - 35 };
-  contextGroup.add(groundRoad([admiral, mid, end], 7));
-  if (!named.admiral) contextGroup.add(groundRoad([{ x: -340, z: 2 }, { x: -340, z: -300 }], 7));
+  // New link road: from the Admiral Parade / Playford Alive East connection,
+  // east parallel to Curtis Road, then south under the overpass just west of
+  // the rail, tying into Palina Court
+  const adm = named.admiral || { x: -238, z: -8 };
+  const pal = named.palina || railOffsetPt(-95, -26);
+  contextGroup.add(groundRoad([
+    adm,
+    { x: -194, z: -52 }, { x: -139, z: -63 }, { x: -73, z: -58 }, { x: -34, z: -45 },
+    railOffsetPt(15, wOff), railOffsetPt(-20, wOff),
+    pal,
+  ], 7));
 
   ucLinkCrossings = [eOff, wOff];      // undercroft keeps clear of the underpass roads
   buildUndercroft();
