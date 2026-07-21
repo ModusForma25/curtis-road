@@ -959,11 +959,12 @@ way["railway"="rail"](around.x:900)->.rw;
       setAlignChip('bad', '⚠ NOT aligned — OSM unreachable, model on approximate coordinates. Reload later.');
     }
   }
-  updateStats();
-  buildSatellite(site.lat, site.lon);
+  // every tail step is independent — one failure must never block the rest
+  try { updateStats(); } catch (e) {}
+  try { buildSatellite(site.lat, site.lon); } catch (e) { setAlignChip('warn', '⚠ imagery build failed: ' + e.message); }
   // sequential — overpass-api.de rejects concurrent queries from one client
-  await loadBuildings(site.lat, site.lon);
-  await loadStreets(site.lat, site.lon);
+  try { await loadBuildings(site.lat, site.lon); } catch (e) {}
+  try { await loadStreets(site.lat, site.lon); } catch (e) {}
 }
 
 /* ---------------- generic ribbon along a path ---------------- */
@@ -1620,30 +1621,44 @@ function buildConnectors(named) {
   named = named || {};
   const eOff = 18, wOff = -18;         // underpass offsets from the rail centreline
 
+  // new civil roads render with full asphalt + markings and a shared-use path
+  // alongside, so they read as project works rather than context streets
+  const newRoad = pts => {
+    const p = makePath(pts);
+    const g = new THREE.Group();
+    g.add(pathRibbon(p, p.sMin, p.sMax, 7.5, 0, () => 0.035, MAT.asphalt, 5));
+    g.add(pathRibbon(p, p.sMin, p.sMax, 2.5, 6.2, () => 0.045, MAT.path, 5));
+    return g;
+  };
+
   // Charlotte Street → Alawoona Road: curls off Charlotte's north end, passes
   // under the overpass hugging the east side of the rail, into Alawoona's south end
   const ch = named.charlotte || railOffsetPt(-85, 55);
   const al = named.alawoona || railOffsetPt(52, 26);
   const sC = railPath.nearest(ch.x, ch.z).s;
   const sA = railPath.nearest(al.x, al.z).s;
-  contextGroup.add(groundRoad([
-    ch,
-    railOffsetPt(sC + (sA - sC) * 0.35, eOff),
-    railOffsetPt(sC + (sA - sC) * 0.65, eOff),
-    al,
-  ], 7));
+  try {
+    contextGroup.add(newRoad([
+      ch,
+      railOffsetPt(sC + (sA - sC) * 0.35, eOff),
+      railOffsetPt(sC + (sA - sC) * 0.65, eOff),
+      al,
+    ]));
+  } catch (e) {}
 
   // New link road: from the Admiral Parade / Playford Alive East connection,
   // east parallel to Curtis Road, then south under the overpass just west of
   // the rail, tying into Palina Court
   const adm = named.admiral || { x: -238, z: -8 };
   const pal = named.palina || railOffsetPt(-95, -26);
-  contextGroup.add(groundRoad([
-    adm,
-    { x: -194, z: -52 }, { x: -139, z: -63 }, { x: -73, z: -58 }, { x: -34, z: -45 },
-    railOffsetPt(15, wOff), railOffsetPt(-20, wOff),
-    pal,
-  ], 7));
+  try {
+    contextGroup.add(newRoad([
+      adm,
+      { x: -194, z: -52 }, { x: -139, z: -63 }, { x: -73, z: -58 }, { x: -34, z: -45 },
+      railOffsetPt(15, wOff), railOffsetPt(-20, wOff),
+      pal,
+    ]));
+  } catch (e) {}
 
   ucLinkCrossings = [eOff, wOff];      // undercroft keeps clear of the underpass roads
   buildUndercroft();
@@ -1725,10 +1740,10 @@ async function loadStreets(atLat, atLon) {
       streetsGroup.add(sp);
     }
     streetsGroup.visible = params.showStreets;
-    buildConnectors(named);
+    try { buildConnectors(named); } catch (e) {}
     streetsStatus = `${count} OSM streets, ${labelBest.size} labels`;
   } catch (e) {
-    buildConnectors(null);
+    try { buildConnectors(null); } catch (e2) {}
     streetsStatus = 'unavailable (' + (e.message || 'offline') + ')';
   }
   updateStats();
@@ -2313,6 +2328,11 @@ panelToggle.addEventListener('click', () => {
   panelToggle.textContent = panelEl.classList.contains('collapsed') ? '▸' : '▾';
 });
 if (innerWidth < 720) { panelEl.classList.add('collapsed'); panelToggle.textContent = '▸'; }
+
+/* surface ANY runtime failure on the status chip instead of dying silently */
+addEventListener('error', e => setAlignChip('bad', '⚠ runtime error: ' + (e.message || e.error)));
+addEventListener('unhandledrejection', e =>
+  setAlignChip('bad', '⚠ async error: ' + ((e.reason && e.reason.message) || e.reason)));
 
 const clock = new THREE.Clock();
 const yAxis = new THREE.Vector3(0, 1, 0);
