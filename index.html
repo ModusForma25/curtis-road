@@ -329,7 +329,7 @@ const params = {
   spanCount: 6,                 // = spansLeft + 1 (rail span) + spansRight (kept in sync)
   spansLeft: 3,                 // approach spans left of the rail
   spansRight: 2,                // approach spans right of the rail
-  spanLengths: [28, 30, 32, 66, 32, 28],   // index spansLeft (3) is the rail span (clears the skewed corridor)
+  spanLengths: [28, 30, 32, 42, 32, 28],   // index spansLeft (3) is the rail span (42 m = max concrete Super-T)
   lanesPerDir: 1,
   clearance: 6.8,
   rampGrade: 5,                 // approach ramp grade (%) — vertical rise / run
@@ -2668,7 +2668,9 @@ function renderSpanList() {
     if (params.spanLengths[i] === undefined) params.spanLengths[i] = 32;
     const row = document.createElement('div');
     row.className = 'row';
-    const maxLen = params.structure === 'arch' ? 130 : 90;
+    // max buildable span by structure type: concrete Super-T ≈ 42 m,
+    // steel plate girder longer, network arch longest
+    const maxLen = params.structure === 'arch' ? 130 : params.structure === 'steel' ? 75 : 42;
     const label = i < railIdx ? `Left ${railIdx - i}` : i === railIdx ? 'Rail span' : `Right ${i - railIdx}`;
     row.innerHTML = `<label>${label}</label>
       <input type="range" min="18" max="${maxLen}" step="1" value="${Math.min(params.spanLengths[i], maxLen)}">
@@ -2691,9 +2693,10 @@ function setTypeButtons() {
 }
 document.querySelectorAll('#typeBtns button').forEach(b => b.addEventListener('click', () => {
   params.structure = b.dataset.type;
-  if (params.structure === 'arch' && params.spanCount === 3 &&
-      params.spanLengths.slice(0, 3).join() === '30,36,30') {
-    params.spanLengths[params.spansLeft] = 64;   // a longer arch over the rail reads best
+  // arch can span the rail in one go — open it up; concrete/steel get clamped
+  // back to their buildable maxima by renderSpanList
+  if (params.structure === 'arch' && params.spanLengths[params.spansLeft] < 55) {
+    params.spanLengths[params.spansLeft] = 64;
   }
   setTypeButtons(); renderSpanList(); buildBridge();
 }));
