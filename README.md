@@ -57,6 +57,22 @@ falls back to flat-colour ground and procedural building massing offline).
   station platforms, an animated 3-car EMU and road traffic over the new bridge
 - Preset camera views (overview, western approach, rail corridor, shared-use path)
 
+**Matching the concept plan (image 1 / "Proposed treatments")**
+- The at-grade network (Charlotte St–Alawoona Rd, the Playford Alive East link
+  road, the left-in/left-out slips, the eastern Curtis Rd connection) is
+  **traced from the DIT plan** and stored as normalised image coordinates in
+  `PLAN_FEATURES`, rendered through the model's real geo pipeline.
+- **Concept plan** panel: overlay the DIT plan as a georeferenced decal on the
+  ground and **register** it onto the satellite with the shift / scale /
+  rotation sliders. The traced roads share the same `PLAN_REG` transform, so
+  they move into place *with* the picture — register once, everything snaps.
+- **Trace mode**: tick it, then click along any road/path on the ground to
+  digitise it against the registered plan; **Copy trace** puts a ready-to-paste
+  `PLAN_FEATURES` entry on the clipboard. This is how a line is made to match
+  the plan exactly.
+- Save the plan image (image 1) next to `index.html` as `plan.png` for the
+  overlay (the filename is `PLAN_IMG` in the script).
+
 ## Notes
 
 This is an indicative concept visualisation for exploration and discussion —

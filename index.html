@@ -20,9 +20,10 @@
   #panel {
     position: fixed; top: 12px; left: 12px; width: 330px; max-height: calc(100% - 24px);
     background: var(--panel-bg); color: var(--text); border-radius: 10px;
-    box-shadow: 0 8px 30px rgba(0,0,0,.5); overflow-y: auto; z-index: 10;
+    box-shadow: 0 8px 30px rgba(0,0,0,.5); overflow-y: auto; overflow-x: hidden; z-index: 10;
     backdrop-filter: blur(6px); font-size: 13px;
   }
+  #panel .body, #panel details, #panel header { max-width: 100%; }
   #panel header { padding: 14px 16px 10px; border-bottom: 1px solid rgba(255,255,255,.08); }
   #panel header .titlebar { display: flex; align-items: center; gap: 8px; }
   #panel header h1 { margin: 0 0 4px; font-size: 15px; color: var(--accent); letter-spacing: .2px; flex: 1; }
@@ -48,12 +49,20 @@
   .body { padding: 2px 16px 12px; }
 
   .row { display: flex; align-items: center; gap: 8px; margin: 7px 0; }
-  .row label { flex: 0 0 118px; color: var(--muted); font-size: 12px; }
-  .row input[type=range] { flex: 1; accent-color: var(--accent); }
+  .row label { flex: 1 1 108px; min-width: 0; color: var(--muted); font-size: 12px; }
+  .row input[type=range] { flex: 1 1 60px; min-width: 0; accent-color: var(--accent); }
   .row .val { flex: 0 0 52px; text-align: right; font-variant-numeric: tabular-nums; color: var(--text); font-size: 12px; }
+  .row .numbox { flex: 0 0 52px; width: 52px; min-width: 0; background: #1c2630; color: var(--text); border: 1px solid #32414f;
+    border-radius: 5px; padding: 3px 4px; font-size: 11px; text-align: right; font-variant-numeric: tabular-nums; }
+  .row .numbox:focus { outline: none; border-color: var(--accent); }
+  #featList div { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
+  #featList button { margin-left: auto; background: none; border: 1px solid #4a3436; color: #e79; border-radius: 4px;
+    font-size: 11px; line-height: 1; padding: 2px 6px; cursor: pointer; }
+  #featList button:hover { border-color: #e79; }
   .row select {
-    flex: 1; background: #1c2630; color: var(--text); border: 1px solid #32414f; border-radius: 5px; padding: 4px 6px; font-size: 12px;
+    flex: 1 1 60px; min-width: 0; background: #1c2630; color: var(--text); border: 1px solid #32414f; border-radius: 5px; padding: 4px 6px; font-size: 12px;
   }
+  .row input[type=text] { min-width: 0; }
   .row input[type=checkbox] { accent-color: var(--accent); width: 15px; height: 15px; }
   .row input[type=text] { flex: 1; background: #1c2630; color: var(--text); border: 1px solid #32414f; border-radius: 5px; padding: 4px 6px; font-size: 11px; }
   .row.check label { flex: 1; cursor: pointer; }
@@ -84,9 +93,17 @@
     font-size: 10px; background: rgba(0,0,0,.45); padding: 3px 8px; border-radius: 4px; max-width: 60%;
   }
   #loading {
-    position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: 20;
-    color: var(--text); background: var(--panel-bg); padding: 16px 26px; border-radius: 10px; font-size: 14px;
+    position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 16px;
+    background: #0b0f13; color: var(--text); font-size: 15px; text-align: center;
+    transition: opacity 0.6s ease;
   }
+  #loading .spinner {
+    width: 42px; height: 42px; border: 4px solid #2a3742; border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 0.9s linear infinite;
+  }
+  #loading .sub { font-size: 12px; color: var(--muted); max-width: 320px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
   #viewBtns { position: fixed; top: 12px; right: 12px; display: flex; flex-direction: column; gap: 6px; z-index: 10; }
   #viewBtns button {
     background: var(--panel-bg); color: var(--text); border: 1px solid #32414f; border-radius: 7px;
@@ -94,11 +111,21 @@
   }
   #viewBtns button:hover { border-color: var(--accent); color: var(--accent); }
   @media (max-width: 720px) { #panel { width: calc(100% - 24px); max-height: 55%; } }
+  /* very narrow phones: tighten fixed widths so nothing overflows the panel */
+  @media (max-width: 430px) {
+    .row label { flex-basis: 92px; font-size: 11.5px; }
+    .row .numbox { flex-basis: 46px; width: 46px; }
+    .row { gap: 6px; }
+  }
 </style>
 </head>
 <body>
 <div id="app"></div>
-<div id="loading">Loading site imagery &amp; model…</div>
+<div id="loading">
+  <div class="spinner"></div>
+  <div id="loadingMsg">Loading satellite imagery &amp; aligning model…</div>
+  <div class="sub">Fetching Esri tiles and the OpenStreetMap alignment — this can take a few seconds on first load.</div>
+</div>
 
 <div id="panel">
   <header>
@@ -121,13 +148,19 @@
         <button data-type="steel">Steel plate<br>girders</button>
         <button data-type="arch">Network<br>arch</button>
       </div>
-      <div class="row"><label>Number of spans</label>
-        <input type="range" id="spanCount" min="1" max="6" step="1" value="3"><span class="val" id="spanCountVal">3</span></div>
+      <div class="row"><label>Spans left of rail</label>
+        <input type="range" id="spansLeft" min="0" max="4" step="1" value="1"><span class="val" id="spansLeftVal">1</span></div>
+      <div class="row"><label>Spans right of rail</label>
+        <input type="range" id="spansRight" min="0" max="4" step="1" value="1"><span class="val" id="spansRightVal">1</span></div>
       <div id="spanList"></div>
       <div class="row"><label>Lanes per direction</label>
         <select id="lanes"><option value="1" selected>1 (dual-lane)</option><option value="2">2</option></select></div>
       <div class="row"><label>Rail clearance</label>
         <input type="range" id="clearance" min="6.0" max="8.0" step="0.1" value="6.8"><span class="val" id="clearanceVal">6.8 m</span></div>
+      <div class="row"><label>Ramp grade</label>
+        <input type="range" id="rampGrade" min="1" max="10" step="0.1" value="5"><span class="val" id="rampGradeVal">5.0 %</span></div>
+      <div class="row"><label>Flat crest length</label>
+        <input type="range" id="crestLen" min="0" max="300" step="2" value="96"><span class="val" id="crestLenVal">96 m</span></div>
       <div class="row"><label>Approaches</label>
         <select id="approach"><option value="retaining" selected>MSE retaining walls</option><option value="embankment">Earth embankments</option></select></div>
     </div>
@@ -206,6 +239,44 @@
     </div>
   </details>
 
+  <details>
+    <summary>Concept plan (image 1)</summary>
+    <div class="body">
+      <div class="row check"><input type="checkbox" id="showPlan"><label for="showPlan">Overlay DIT plan on ground</label></div>
+      <div class="row"><label>Plan opacity</label>
+        <input type="range" id="planOpacity" min="0.1" max="1" step="0.05" value="0.6"><span class="val" id="planOpacityVal">0.60</span></div>
+      <div style="font-size:10.5px;color:#9fb0bf;margin:2px 0 6px">Register the plan onto the satellite — the traced roads move with it:</div>
+      <div class="row"><label>Plan shift E–W</label>
+        <input type="range" id="planE" min="-200" max="200" step="1" value="0"><span class="val" id="planEVal">0 m</span></div>
+      <div class="row"><label>Plan shift N–S</label>
+        <input type="range" id="planN" min="-200" max="200" step="1" value="0"><span class="val" id="planNVal">0 m</span></div>
+      <div class="row"><label>Plan scale</label>
+        <input type="range" id="planScale" min="900" max="1600" step="5" value="1250"><span class="val" id="planScaleVal">1250 m</span></div>
+      <div class="row"><label>Plan rotation</label>
+        <input type="range" id="planRot" min="-180" max="180" step="0.5" value="0"><span class="val" id="planRotVal">0.0°</span></div>
+      <div class="row check"><input type="checkbox" id="planTrace"><label for="planTrace">Trace mode — click the ground to drop points</label></div>
+      <div class="row seg-buttons">
+        <button id="planUndo" type="button">Undo point</button>
+        <button id="planClear" type="button">Clear trace</button>
+        <button id="planCopy" type="button">Copy [u,v]</button>
+      </div>
+      <div class="row"><label>New feature</label>
+        <select id="planType">
+          <option value="road">Civil road (kerbed)</option>
+          <option value="sup">Shared-use path</option>
+          <option value="landscape">Landscaping polygon</option>
+        </select></div>
+      <div class="row"><label>Name</label><input type="text" id="planName" placeholder="e.g. New link road"></div>
+      <div class="row seg-buttons"><button id="planBuild" type="button">Build feature from trace</button></div>
+      <div style="font-size:10.5px;color:#9fb0bf;margin:8px 0 3px">Bridge spine — trace the overpass centreline (west → over rail → east), then:</div>
+      <div class="row seg-buttons"><button id="planSetCentre" type="button">Set as Curtis Rd centreline → rebuild</button></div>
+      <div style="font-size:10.5px;color:#9fb0bf;margin:8px 0 3px">Traced features:</div>
+      <div id="featList"></div>
+      <div class="row seg-buttons"><button id="planExport" type="button">Export everything → clipboard</button></div>
+      <div id="planStatus" style="font-size:10.5px;color:#9fb0bf;margin-top:4px"></div>
+    </div>
+  </details>
+
   <div id="stats"></div>
 </div>
 
@@ -255,10 +326,14 @@ const CONFIG = {
 
 const params = {
   structure: 'super-t',         // 'super-t' | 'steel' | 'arch'
-  spanCount: 3,
+  spanCount: 3,                 // = spansLeft + 1 (rail span) + spansRight (kept in sync)
+  spansLeft: 1,                 // approach spans left of the rail
+  spansRight: 1,                // approach spans right of the rail
   spanLengths: [30, 36, 30],
   lanesPerDir: 1,
   clearance: 6.8,
+  rampGrade: 5,                 // approach ramp grade (%) — vertical rise / run
+  crestLen: 96,                 // length of the flat crest over the rail (m); shorten to grade the spans
   approach: 'retaining',
   throwScreens: true,
   screenExtent: 'full',
@@ -273,6 +348,7 @@ const params = {
   showTrain: true,
   showCars: true,
   geoX: 0, geoZ: 0,
+  showPlan: false, planOpacity: 0.6,
   sunTime: 12,
   seasonDoy: 172,            // 21 June — worst-case winter shadows
   noise: false,
@@ -349,9 +425,14 @@ const asphaltTex = makeCanvasTex((g, w, h) => {
 });
 
 const pathTex = makeCanvasTex((g, w, h) => {
-  g.fillStyle = '#8a8f8c'; g.fillRect(0, 0, w, h);
+  // peach/orange shared-use path surface, per the DIT concept plan
+  g.fillStyle = '#e39a63'; g.fillRect(0, 0, w, h);
   for (let i = 0; i < 800; i++) {
-    g.fillStyle = `rgba(255,255,255,${Math.random() * 0.05})`;
+    g.fillStyle = `rgba(255,255,255,${Math.random() * 0.06})`;
+    g.fillRect(Math.random() * w, Math.random() * h, 2, 2);
+  }
+  for (let i = 0; i < 400; i++) {
+    g.fillStyle = `rgba(150,80,40,${Math.random() * 0.06})`;      // subtle darker aggregate
     g.fillRect(Math.random() * w, Math.random() * h, 2, 2);
   }
 });
@@ -406,7 +487,7 @@ const pierTex = makeCanvasTex((g, w, h) => {
 
 const MAT = {
   concrete:  new THREE.MeshStandardMaterial({ color: 0xc9c4b8, roughness: 0.9 }),
-  concreteLt:new THREE.MeshStandardMaterial({ color: 0xd8d4c9, roughness: 0.92 }),
+  concreteLt:new THREE.MeshStandardMaterial({ color: 0xd8d4c9, roughness: 0.92, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 }),
   steel:     new THREE.MeshStandardMaterial({ color: 0x4f6275, roughness: 0.45, metalness: 0.55 }),
   archSteel: new THREE.MeshStandardMaterial({ color: 0xdfe3e6, roughness: 0.4, metalness: 0.4 }),
   barrier:   new THREE.MeshStandardMaterial({ color: 0xd2cec5, roughness: 0.85 }),
@@ -424,8 +505,8 @@ const MAT = {
   buildingEdge: new THREE.LineBasicMaterial({ color: 0x8d8474 }),
   embankment:new THREE.MeshStandardMaterial({ color: 0x8a9a66, roughness: 1, side: THREE.DoubleSide }),
   mse:       new THREE.MeshStandardMaterial({ map: msePanelTex, roughness: 0.9, side: THREE.DoubleSide }),
-  asphalt:   new THREE.MeshStandardMaterial({ map: asphaltTex, roughness: 0.95 }),
-  path:      new THREE.MeshStandardMaterial({ map: pathTex, roughness: 0.95 }),
+  asphalt:   new THREE.MeshStandardMaterial({ map: asphaltTex, roughness: 0.95, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -6 }),
+  path:      new THREE.MeshStandardMaterial({ map: pathTex, roughness: 0.95, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 }),
   platform:  new THREE.MeshStandardMaterial({ color: 0xb8b2a6, roughness: 0.9 }),
 };
 
@@ -653,6 +734,16 @@ function pathSane(path, dirX, dirZ, range, maxDevDeg = 35) {
   return true;
 }
 
+/* ---------------- loading-screen readiness signals ----------------
+   The loader stays up until BOTH the model is aligned (OSM crossing +
+   centrelines resolved, or a fallback) AND the central satellite tiles
+   around the bridge have loaded — so the scene never shows mid-alignment. */
+let alignReadyResolve, firstSatResolve;
+const alignReady = new Promise(r => alignReadyResolve = r);
+const firstSat  = new Promise(r => firstSatResolve = r);
+function resolveAlignReady() { if (alignReadyResolve) { alignReadyResolve(); alignReadyResolve = null; } }
+function resolveFirstSat()   { if (firstSatResolve)   { firstSatResolve();   firstSatResolve = null; } }
+
 /* ---------------- satellite imagery ---------------- */
 
 function tileURL(z, x, y) {
@@ -678,6 +769,16 @@ function buildSatellite(atLat, atLon) {
   const loader = new THREE.TextureLoader();
   loader.setCrossOrigin('anonymous');
 
+  // track the central tiles (those around the bridge) so the loading screen can
+  // reveal the scene once the area of interest is textured, not all 121 tiles
+  const rad = Math.min(2, half);
+  const isCentral = (dx, dy) => Math.abs(dx) <= rad && Math.abs(dy) <= rad;
+  let centralTotal = 0;
+  for (let dx = -half; dx <= half; dx++) for (let dy = -half; dy <= half; dy++) if (isCentral(dx, dy)) centralTotal++;
+  let centralSettled = 0;
+  const settleCentral = () => { if (++centralSettled >= centralTotal) resolveFirstSat(); };
+  if (!centralTotal) resolveFirstSat();
+
   for (let dx = -half; dx <= half; dx++) for (let dy = -half; dy <= half; dy++) {
     const tx = cx + dx, ty = cy + dy;
     const mx = (tx + 0.5) / n * world - world / 2;
@@ -693,10 +794,11 @@ function buildSatellite(atLat, atLon) {
     mesh.userData.isSatTile = true;
     mesh.visible = params.showSat;
     geoGroup.add(mesh);
+    const central = isCentral(dx, dy);
     loader.load(
       tileURL(z, tx, ty),
-      tex => { tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8; mat.map = tex; mat.color.set(0xffffff); mat.needsUpdate = true; },
-      undefined, () => {}
+      tex => { tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8; mat.map = tex; mat.color.set(0xffffff); mat.needsUpdate = true; if (central) settleCentral(); },
+      undefined, () => { if (central) settleCentral(); }
     );
   }
 }
@@ -709,6 +811,249 @@ function buildSatellite(atLat, atLon) {
   apron.position.y = -0.25;
   apron.receiveShadow = true;
   scene.add(apron);
+}
+
+/* ---------------- concept-plan overlay (image 1) ----------------
+   Drapes the DIT "Proposed treatments" plan as a georeferenced, semi-transparent
+   decal on the ground, riding the satellite frame. Positioned by PLAN_REG — the
+   SAME transform that places the traced at-grade roads — so registering this
+   picture onto the satellite also registers every traced road. Save the plan
+   image next to index.html as the filename in PLAN_IMG. */
+const PLAN_IMG = 'plan.png';
+let planOverlay = null, planOverlayTex = null;
+
+function positionPlanOverlay() {
+  if (!planOverlay || !planOverlayTex || !planOverlayTex.image) return;
+  const img = planOverlayTex.image;
+  const aspect = img.height / img.width;                     // v spans 0..aspect
+  // Position and orient the decal through the SAME transform the traced roads
+  // use (planUVToModel), so the picture and the roads stay locked together at
+  // any rotation. The mesh lives in the model frame (scene), not geoGroup.
+  const c  = planUVToModel(0.5, 0.5 * aspect);               // image centre
+  const cu = planUVToModel(0.5 + 1e-3, 0.5 * aspect);        // a step along image +u (right)
+  const ang = Math.atan2(cu.z - c.z, cu.x - c.x);            // bearing of image-right in model XZ
+  planOverlay.position.set(c.x, 0.07, c.z);
+  planOverlay.rotation.y = -ang;                             // local +x (image right) → that bearing
+  planOverlay.scale.set(PLAN_REG.widthM, 1, PLAN_REG.widthM * aspect);
+}
+
+let planLoading = false;
+function rebuildPlanOverlay() {
+  if (planOverlay) { positionPlanOverlay(); return; }        // already loaded — just reposition
+  if (planLoading) return;                                   // a load is already in flight
+  planLoading = true;
+  setPlanStatus('loading');
+  // cache-bust so a freshly-saved plan.png is picked up on retry (no stale 404)
+  const url = PLAN_IMG + '?t=' + (performance.now() | 0);
+  const loader = new THREE.TextureLoader();
+  loader.load(url,
+    tex => {
+      planLoading = false;
+      tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+      planOverlayTex = tex;
+      const geo = new THREE.PlaneGeometry(1, 1, 1, 1);
+      geo.rotateX(-Math.PI / 2);
+      const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true,
+        opacity: params.planOpacity, depthWrite: false, side: THREE.DoubleSide });
+      planOverlay = new THREE.Mesh(geo, mat);
+      planOverlay.renderOrder = 4;
+      planOverlay.visible = params.showPlan;
+      scene.add(planOverlay);                                // model frame — locks to the traced roads
+      positionPlanOverlay();
+      setPlanStatus('loaded');
+      console.log(`[plan] overlay loaded ${tex.image.width}×${tex.image.height}, ` +
+                  `placed at model (${planOverlay.position.x.toFixed(0)}, ${planOverlay.position.z.toFixed(0)}), ` +
+                  `scale ${PLAN_REG.widthM} m`);
+    },
+    undefined,
+    err => {
+      planLoading = false;
+      setPlanStatus('missing');
+      console.warn('[plan] could not load "' + PLAN_IMG + '". If it IS saved next to ' +
+        'index.html, you are probably opening the file directly (file://) — serve it over ' +
+        'http instead: `npx serve .` or `python -m http.server`, then reload.', err);
+    }
+  );
+}
+function setPlanStatus(s) {
+  const el = document.getElementById('planStatus');
+  if (!el) return;
+  el.textContent = s === 'loaded' ? '✓ plan image loaded — register it with the sliders'
+    : s === 'loading' ? 'loading plan image…'
+    : s === 'missing' ? `⚠ "${PLAN_IMG}" not loaded — if saved, serve over http (see console)`
+    : '';
+}
+
+/* ---------------- click-digitiser (trace a line against the overlay) ----------------
+   Trace mode ON → click along a road/path on the ground; each click drops a
+   marker and appends a normalised [u,v] to the current line. "Copy trace"
+   prints a ready-to-paste PLAN_FEATURES entry (in the exact [u,v] space the
+   trace table uses) to the console and clipboard, so a perfected line can be
+   pasted straight back into PLAN_FEATURES. */
+const digitiser = { on: false, uv: [], markers: new THREE.Group() };
+scene.add(digitiser.markers);
+const _rayGroundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+
+// model (x,z) → normalised image (u,v), the inverse of planUVToModel
+function modelToPlanUV(x, z) {
+  // model → geo-local
+  const cr = Math.cos(geoRot), sr = Math.sin(geoRot);
+  const gx = x * cr - z * sr + geoCross.x, gz = x * sr + z * cr + geoCross.z;
+  // geo-local → lon/lat → metres east/north of crossing
+  const merc = { x: gx / groundScale + centerMerc.x, y: -gz / groundScale + centerMerc.y };
+  const lon = merc.x / (R_EARTH * DEG);
+  const lat = (2 * Math.atan(Math.exp(merc.y / R_EARTH)) - Math.PI / 2) / DEG;
+  const e = (lon - site.lon) * 111320 * Math.cos(site.lat * DEG);
+  const n = (lat - site.lat) * 111320;
+  // metres → normalised image (u,v), inverse of planUVToMetres
+  const R = PLAN_REG;
+  const em = e - R.offE, nm = n - R.offN;
+  const c = Math.cos(-R.rotDeg * DEG), s = Math.sin(-R.rotDeg * DEG);
+  const E = em * c - nm * s, N = em * s + nm * c;
+  return [E / R.widthM + R.u0, -N / R.widthM + R.v0];
+}
+
+function digitiserClick(ev) {
+  if (!digitiser.on) return;
+  const rect = renderer.domElement.getBoundingClientRect();
+  const ndc = new THREE.Vector2(
+    ((ev.clientX - rect.left) / rect.width) * 2 - 1,
+    -((ev.clientY - rect.top) / rect.height) * 2 + 1);
+  const ray = new THREE.Raycaster();
+  ray.setFromCamera(ndc, camera);
+  const hit = new THREE.Vector3();
+  if (!ray.ray.intersectPlane(_rayGroundPlane, hit)) return;
+  digitiser.uv.push(modelToPlanUV(hit.x, hit.z));
+  const dot = new THREE.Mesh(new THREE.SphereGeometry(1.4, 12, 12),
+    new THREE.MeshBasicMaterial({ color: 0xffb81c }));
+  dot.position.set(hit.x, 0.3, hit.z);
+  digitiser.markers.add(dot);
+  const el = document.getElementById('planStatus');
+  if (el) el.textContent = `tracing — ${digitiser.uv.length} point(s)`;
+}
+function digitiserCopy() {
+  const body = digitiser.uv.map(p => `[${p[0].toFixed(4)}, ${p[1].toFixed(4)}]`).join(', ');
+  const out = `  { type: 'road', name: 'NEW', pts: [ ${body} ] },`;
+  try { navigator.clipboard.writeText(out); } catch (e) {}
+  console.log('PLAN_FEATURES entry (copied to clipboard):\n' + out);
+  const el = document.getElementById('planStatus');
+  if (el) el.textContent = `copied ${digitiser.uv.length}-point trace to clipboard + console`;
+}
+function digitiserClear() {
+  digitiser.uv = [];
+  disposeGroup(digitiser.markers);
+  setPlanMsg('trace cleared');
+}
+function digitiserUndo() {
+  if (!digitiser.uv.length) return;
+  digitiser.uv.pop();
+  const m = digitiser.markers.children[digitiser.markers.children.length - 1];
+  if (m) { digitiser.markers.remove(m); m.geometry.dispose(); m.material.dispose(); }
+  setPlanMsg(`tracing — ${digitiser.uv.length} point(s)`);
+}
+function setPlanMsg(t) { const el = document.getElementById('planStatus'); if (el) el.textContent = t || ''; }
+
+/* build the current trace as a new persistent feature (road / path / polygon) */
+function buildUserFeature() {
+  if (digitiser.uv.length < 2) { setPlanMsg('trace ≥2 points first (tick Trace mode, click the ground)'); return; }
+  const type = document.getElementById('planType').value;
+  const name = (document.getElementById('planName').value || '').trim() || type;
+  PLAN_FEATURES.push({ type, name, pts: digitiser.uv.map(p => p.slice()) });
+  buildPlan();
+  renderFeatList();
+  digitiserClear();
+  document.getElementById('planName').value = '';
+  setPlanMsg(`built "${name}" (${type}) — ${PLAN_FEATURES.length} feature(s)`);
+}
+function removeFeature(i) {
+  PLAN_FEATURES.splice(i, 1);
+  buildPlan();
+  renderFeatList();
+  setPlanMsg(`removed feature — ${PLAN_FEATURES.length} left`);
+}
+function resetCentreline() {
+  planCentreline = null;
+  if (osmRoadPath) { roadPath = osmRoadPath; try { buildBridge(); buildCars(); buildPlan(); updateStats(); } catch (e) {} }
+  renderFeatList();
+  setPlanMsg('centreline reset to OSM alignment');
+}
+function renderFeatList() {
+  const el = document.getElementById('featList');
+  if (!el) return;
+  el.innerHTML = '';
+  if (planCentreline) {
+    const d = document.createElement('div');
+    d.innerHTML = `<span>▸ Curtis Rd centreline <span style="opacity:.6">(${planCentreline.length} pts)</span></span>`;
+    const b = document.createElement('button'); b.textContent = 'reset';
+    b.addEventListener('click', resetCentreline);
+    d.appendChild(b); el.appendChild(d);
+  }
+  PLAN_FEATURES.forEach((f, i) => {
+    const d = document.createElement('div');
+    d.innerHTML = `<span>• ${f.name} <span style="opacity:.6">(${f.type}, ${f.pts.length})</span></span>`;
+    const b = document.createElement('button'); b.textContent = '×'; b.title = 'delete';
+    b.addEventListener('click', () => removeFeature(i));
+    d.appendChild(b); el.appendChild(d);
+  });
+  if (!planCentreline && !PLAN_FEATURES.length) el.innerHTML = '<div style="opacity:.6">(none yet)</div>';
+}
+
+/* serialise the current registration + centreline + features as a code block to
+   paste back into index.html (over the matching declarations) so the model opens
+   already matched to the concept plan. Copied to clipboard and logged. */
+function exportPlan() {
+  const R = PLAN_REG;
+  const fmt = pts => pts.map(p => `[${p[0].toFixed(4)}, ${p[1].toFixed(4)}]`).join(', ');
+  let s = '';
+  s += `const PLAN_REG = { u0: ${R.u0}, v0: ${R.v0}, widthM: ${R.widthM}, rotDeg: ${R.rotDeg}, offE: ${R.offE}, offN: ${R.offN} };\n`;
+  s += `const PLAN_CENTRELINE = ${planCentreline ? '[ ' + fmt(planCentreline) + ' ]' : 'null'};\n`;
+  s += `let PLAN_FEATURES = [\n`;
+  PLAN_FEATURES.forEach(f => { s += `  { type: '${f.type}', name: ${JSON.stringify(f.name)}, pts: [ ${fmt(f.pts)} ] },\n`; });
+  s += `];\n`;
+  try { navigator.clipboard.writeText(s); } catch (e) {}
+  console.log('=== PLAN export — paste into index.html (see "How to save" note) ===\n' + s);
+  setPlanMsg('exported to clipboard + console — paste it back to persist');
+}
+
+/* make every slider's readout an editable number box (type an exact value) */
+function enhanceSliders(root) {
+  root.querySelectorAll('input[type=range]').forEach(r => {
+    if (r.dataset.enh) return; r.dataset.enh = '1';
+    const val = r.parentElement && r.parentElement.querySelector('.val');
+    const box = document.createElement('input');
+    box.type = 'number'; box.className = 'numbox';
+    if (r.min !== '') box.min = r.min;
+    if (r.max !== '') box.max = r.max;
+    if (r.step !== '') box.step = r.step;
+    box.value = r.value;
+    (val || r).insertAdjacentElement('afterend', box);
+    if (val) val.style.display = 'none';
+    const commit = () => {
+      r.value = box.value;
+      r.dispatchEvent(new Event('input', { bubbles: true }));
+      box.value = r.value;                       // reflect any min/max/step clamping
+    };
+    box.addEventListener('change', commit);
+    box.addEventListener('keydown', e => { if (e.key === 'Enter') { commit(); box.blur(); } });
+    r.addEventListener('input', () => { box.value = r.value; });   // keep box synced when dragging
+  });
+}
+
+/* Replace the model's master centreline (roadPath) with a line traced from the
+   registered concept plan, then rebuild every element that follows it. This is
+   how the whole bridge + approaches are realigned onto the concept overpass:
+   the deck, ramps, screens, barriers, piers, traffic and flanking shared-use
+   paths all read roadPath/roadFrame, so they move together. The rail stays on
+   its OSM alignment. s = 0 (the crossing origin) resolves to the traced point
+   nearest the rail crossing automatically via makePath. */
+function applyCurtisCentreline(mpts) {
+  if (!mpts || mpts.length < 2) return false;
+  roadPath = orientPath(makePath(mpts), 1, 0);   // orient so it heads east (+x)
+  try { buildBridge(); } catch (e) {}
+  try { buildCars(); } catch (e) {}
+  try { buildPlan(); } catch (e) {}              // SUPs offset the new spine; connectors unchanged
+  try { updateStats(); } catch (e) {}
+  return true;
 }
 
 /* ---------------- Adelaide sun position (for overshadowing checks) ---------------- */
@@ -938,10 +1283,19 @@ way["railway"="rail"](around.x:900)->.rw;
       if (pathSane(p, railDir.x, railDir.z, 550)) { railPath = p; railAligned = railCurved = true; }
     }
 
+    // remember the OSM/fallback spine, then — if a concept centreline is saved —
+    // override roadPath with it so the bridge opens on the concept alignment
+    osmRoadPath = roadPath;
+    if (planCentreline && planCentreline.length >= 2) {
+      try { roadPath = orientPath(makePath(planCentreline.map(p => planUVToModel(p[0], p[1]))), 1, 0); } catch (e) {}
+    }
+
     updateSun();           // geoRot changed — re-aim the sun relative to true north
     buildRail();
     buildBridge();
     buildCars();
+    try { buildPlan(); } catch (e) {}   // rebuild the traced roads NOW that the alignment is
+                           // known, not later in loadStreets — they use planUVToModel(site,geoRot)
     siteStatus = `OSM crossing pinned, imagery rotated ${rotDeg.toFixed(1)}°, rail skew ${(railB / DEG).toFixed(1)}° · ` +
       `road ${roadCurved ? 'follows mapped centreline' : 'straight (centreline rejected)'}; ` +
       `rail ${railCurved ? 'follows mapped centreline' : 'straight (centreline rejected)'}`;
@@ -959,9 +1313,11 @@ way["railway"="rail"](around.x:900)->.rw;
       setAlignChip('bad', '⚠ NOT aligned — OSM unreachable, model on approximate coordinates. Reload later.');
     }
   }
+  // alignment attempt is done (success or fallback) — release the loader's align gate
+  resolveAlignReady();
   // every tail step is independent — one failure must never block the rest
   try { updateStats(); } catch (e) {}
-  try { buildSatellite(site.lat, site.lon); } catch (e) { setAlignChip('warn', '⚠ imagery build failed: ' + e.message); }
+  try { buildSatellite(site.lat, site.lon); } catch (e) { setAlignChip('warn', '⚠ imagery build failed: ' + e.message); resolveFirstSat(); }
   // sequential — overpass-api.de rejects concurrent queries from one client
   try { await loadBuildings(site.lat, site.lon); } catch (e) {}
   try { await loadStreets(site.lat, site.lon); } catch (e) {}
@@ -1111,23 +1467,19 @@ function structDepth(type, maxSpan) {
 function computeDerived() {
   const spans = params.spanLengths.slice(0, params.spanCount);
   const total = spans.reduce((a, b) => a + b, 0);
-  let x0 = -total / 2;
 
-  // network arch: a single arch span only, centred across the rail corridor,
-  // with concrete girder approach spans either side
-  derived.archIdx = -1;
-  if (params.structure === 'arch') {
-    let idx = Math.floor((spans.length - 1) / 2), c = x0;
-    for (let i = 0; i < spans.length; i++) {
-      if (0 >= c && 0 <= c + spans[i]) { idx = i; break; }
-      c += spans[i];
-    }
-    derived.archIdx = idx;
-    let mid = x0;
-    for (let i = 0; i < idx; i++) mid += spans[i];
-    mid += spans[idx] / 2;
-    x0 -= mid;                         // shift layout so the arch span midpoint sits on the rail
-  }
+  // One span crosses the rail (the "rail span"). Its index equals the number of
+  // approach spans placed to the LEFT of the rail, so spansLeft spans lie left
+  // and spansRight lie right. Its midpoint is shifted onto s = 0 (the rail), so
+  // the layout can be asymmetric (e.g. 2 spans left, 1 right). For a network
+  // arch this rail span IS the arch; girder approach spans sit either side.
+  const railIdx = THREE.MathUtils.clamp(params.spansLeft, 0, spans.length - 1);
+  let mid = 0;
+  for (let i = 0; i < railIdx; i++) mid += spans[i];
+  mid += spans[railIdx] / 2;
+  const x0 = -mid;
+  derived.railIdx = railIdx;
+  derived.archIdx = params.structure === 'arch' ? railIdx : -1;
 
   derived.totalLen = total;
   derived.x0 = x0; derived.x1 = x0 + total;
@@ -1139,17 +1491,24 @@ function computeDerived() {
     d = structDepth(params.structure, Math.max(...spans));
   }
   derived.deckTopY = params.clearance + d + 0.42;
-  derived.rampLen = derived.deckTopY / 0.05;
+  // vertical profile: flat crest of length crestLen centred on the rail, then a
+  // constant-grade descent each side until the road meets the ground. Shortening
+  // the crest below the deck length makes the grade begin ON the elevated spans.
+  derived.grade = THREE.MathUtils.clamp(params.rampGrade, 1, 12) / 100;   // rise / run
+  derived.crestHalf = Math.max(0, params.crestLen / 2);                   // flat half-length on the rail
+  derived.rampLen = derived.deckTopY / derived.grade;                     // horizontal run, crest edge → ground
+  derived.toe = derived.crestHalf + derived.rampLen;                      // where the road reaches ground, each side
   derived.roadWidth = params.lanesPerDir * 2 * 3.5 + 1.0;
   derived.deckWidth = derived.roadWidth + 2 * (0.45 + 3.0 + 0.4);
   derived.structD = d;
-  derived.roadEnd = Math.max(CONFIG.roadHalfLength, Math.max(-derived.x0, derived.x1) + derived.rampLen + 60);
+  derived.roadEnd = Math.max(CONFIG.roadHalfLength, derived.toe + 60);
 }
 
 function roadY(s) {
-  if (s >= derived.x0 && s <= derived.x1) return derived.deckTopY;
-  const a = s < derived.x0 ? derived.x0 - s : s - derived.x1;
-  return derived.deckTopY * smooth(1 - a / derived.rampLen);
+  const a = Math.abs(s) - derived.crestHalf;   // horizontal distance past the flat crest
+  if (a <= 0) return derived.deckTopY;          // flat crest over the rail
+  const y = derived.deckTopY - derived.grade * a;   // constant-grade descent
+  return y > 0 ? y : 0;
 }
 
 function disposeGroup(g) {
@@ -1158,7 +1517,8 @@ function disposeGroup(g) {
 }
 
 function elevatedExtent() {
-  return [derived.x0 - derived.rampLen * 0.97, derived.x1 + derived.rampLen * 0.97];
+  const t = derived.toe * 0.99;   // the whole raised road, from west toe to east toe
+  return [-t, t];
 }
 
 /* ---- girder builders (one straight chord span, local x: 0..len, y=0 at girder TOP) ---- */
@@ -1473,7 +1833,8 @@ function buildPier(sPier, capTopY, W) {
 function buildApproach(side) {
   const g = new THREE.Group();
   const W = derived.deckWidth;
-  const L = derived.rampLen;
+  // ramp runs from the abutment out to the toe (where the grade meets the ground)
+  const L = Math.max(0, side < 0 ? derived.x0 + derived.toe : derived.toe - derived.x1);
   const steps = 30;
   const isWall = params.approach === 'retaining';
   const pos = [], idx = [], uv = [];
@@ -1522,38 +1883,45 @@ function buildBridge() {
   const girderTopY = deckTop - 0.42;
   derived.clash = false;
 
-  /* spans as straight chords between pier stations on the curved alignment */
+  /* spans as straight chords between pier stations, following the vertical grade
+     (each span tilts from roadY at its start to roadY at its end) */
   let sCursor = derived.x0;
   for (let i = 0; i < spans.length; i++) {
     const sEnd = sCursor + spans[i];
     const fA = roadFrame(sCursor), fB = roadFrame(sEnd);
     const chord = Math.hypot(fB.x - fA.x, fB.z - fA.z);
     const yaw = Math.atan2(-(fB.z - fA.z), fB.x - fA.x);
+    const yA = roadY(sCursor), yB = roadY(sEnd);
+    const pitch = Math.atan2(yB - yA, chord);        // deck grade across this span
+    const L3 = Math.hypot(chord, yB - yA);           // true sloped span length
 
     const wrap = new THREE.Group();
-    wrap.position.set(fA.x, 0, fA.z);
+    wrap.position.set(fA.x, yA, fA.z);               // span starts at the road surface
     wrap.rotation.y = yaw;
+    const seg = new THREE.Group();                   // tilt everything to the span grade
+    seg.rotation.z = pitch;                          // local x now runs along the sloped chord
+    wrap.add(seg);
 
-    // deck slab segment
-    const slab = new THREE.Mesh(new THREE.BoxGeometry(chord + 0.3, 0.42, W), MAT.concrete);
-    slab.position.set(chord / 2, deckTop - 0.21, 0);
+    // deck slab segment (road surface at seg-local y = 0)
+    const slab = new THREE.Mesh(new THREE.BoxGeometry(L3 + 0.3, 0.42, W), MAT.concrete);
+    slab.position.set(L3 / 2, -0.21, 0);
     slab.castShadow = true; slab.receiveShadow = true;
-    wrap.add(slab);
+    seg.add(slab);
 
     let spanObj, isArch = false;
     if (params.structure === 'arch') {
       isArch = i === derived.archIdx;
-      spanObj = isArch ? archSpan(chord, W, 0.42) : superTSpan(chord, W);
+      spanObj = isArch ? archSpan(L3, W, 0.42) : superTSpan(L3, W);
     } else if (params.structure === 'steel') {
-      spanObj = steelSpan(chord, W);
+      spanObj = steelSpan(L3, W);
     } else {
-      spanObj = superTSpan(chord, W);
+      spanObj = superTSpan(L3, W);
     }
-    spanObj.position.y = isArch ? deckTop - 0.42 : girderTopY;
-    wrap.add(spanObj);
+    spanObj.position.y = -0.42;                       // girder top just under the deck slab
+    seg.add(spanObj);
     bridgeGroup.add(wrap);
 
-    if (i < spans.length - 1) bridgeGroup.add(buildPier(sEnd, girderTopY, W));
+    if (i < spans.length - 1) bridgeGroup.add(buildPier(sEnd, roadY(sEnd) - 0.42, W));
     sCursor = sEnd;
   }
 
@@ -1561,8 +1929,9 @@ function buildBridge() {
   for (const side of [-1, 1]) {
     const sEnd = side < 0 ? derived.x0 : derived.x1;
     const f = roadFrame(sEnd);
-    const ab = new THREE.Mesh(new THREE.BoxGeometry(2.2, girderTopY, W + 1.2), MAT.concrete);
-    ab.position.set(f.x + f.tx * side * 1.1, girderTopY / 2, f.z + f.tz * side * 1.1);
+    const hAb = Math.max(0.5, roadY(sEnd) - 0.42);   // abutment top at the (graded) girder level
+    const ab = new THREE.Mesh(new THREE.BoxGeometry(2.2, hAb, W + 1.2), MAT.concrete);
+    ab.position.set(f.x + f.tx * side * 1.1, hAb / 2, f.z + f.tz * side * 1.1);
     ab.rotation.y = Math.atan2(-f.tz, f.tx);
     ab.castShadow = true;
     bridgeGroup.add(ab);
@@ -1642,18 +2011,16 @@ function kerbRun(p, off, s0, s1) {
 }
 
 /* a properly modelled ground-level civil road: kerbed carriageway with
-   markings, grass verge, shared-use path, street lighting and a wombat
-   crossing — the plan's standard treatment for the new local roads */
+   markings and street lighting. Shared-use paths are NOT part of the road —
+   they're drawn separately as their own 'sup' features. */
 function buildCivilRoad(pts) {
   const p = makePath(pts);
   const g = new THREE.Group();
   const a = p.sMin + 1, b = p.sMax - 1;
-  g.add(pathRibbon(p, a, b, 9.6, 0, () => 0.08, MAT.concreteLt, 5));    // channel / formation
-  g.add(pathRibbon(p, a, b, 7.0, 0, () => 0.14, MAT.asphalt, 5));
+  g.add(pathRibbon(p, a, b, 8.8, 0, () => 0.12, MAT.concreteLt, 5));    // concrete kerb-&-gutter base
+  g.add(pathRibbon(p, a, b, 8.3, 0, () => 0.20, MAT.asphalt, 5));       // asphalt carriageway (kerb-to-kerb)
   g.add(kerbRun(p, -4.15, a, b));
   g.add(kerbRun(p, 4.15, a, b));
-  g.add(pathRibbon(p, a, b, 2.2, 5.4, () => 0.06, MAT.embankment, 5));  // verge
-  g.add(pathRibbon(p, a, b, 2.5, 7.1, () => 0.12, MAT.path, 5));        // shared-use path
   const headMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, emissive: 0xfff7d0, emissiveIntensity: 0.5 });
   for (let s = a + 18; s < b - 10; s += 45) {
     const f = p.frame(s);
@@ -1671,63 +2038,129 @@ function buildCivilRoad(pts) {
     head.position.set(f.x + f.nx * headOff, 7.24, f.z + f.nz * headOff);
     g.add(pole, arm, head);
   }
-  // wombat crossing mid-length (safe crossing point for the shared-use paths)
-  const sw = (a + b) / 2;
-  const fw = p.frame(sw);
-  const wc = new THREE.Mesh(new THREE.BoxGeometry(4, 0.16, 8.4), MAT.wombat);
-  wc.position.set(fw.x, 0.12, fw.z);
-  wc.rotation.y = Math.atan2(-fw.tz, fw.tx);
-  wc.receiveShadow = true;
-  g.add(wc);
   return g;
 }
 
-/* New local road connections, digitised from the DIT proposed-treatments plan
-   (100 m scale bar; coordinates relative to the crossing, +x east, +z south).
-   End points snap to the mapped OSM street ends when available. */
-function buildConnectors(named) {
-  disposeGroup(contextGroup);
-  named = named || {};
-  const eOff = 18, wOff = -18;         // underpass offsets from the rail centreline
+/* ============================================================================
+   PLAN-ACCURATE at-grade network — traced from image 1 (the DIT "Curtis Road
+   Level Crossing Removal — Proposed treatments" concept plan).
 
-  const newRoad = buildCivilRoad;
+   Every feature is stored in NORMALISED image-1 coordinates: [u, v] with the
+   origin at the image's top-left and BOTH axes divided by the image WIDTH
+   (so v runs 0..height/width). Storing normalised coords makes the trace
+   independent of the resolution of the saved plan image.
 
-  // Charlotte Street → Alawoona Road: curls off Charlotte's north end, passes
-  // under the overpass hugging the east side of the rail, into Alawoona's south end
-  let ch = named.charlotte || railOffsetPt(-85, 55);
-  let al = named.alawoona || railOffsetPt(52, 26);
-  let sC = railPath.nearest(ch.x, ch.z).s;
-  let sA = railPath.nearest(al.x, al.z).s;
-  if (Math.abs(sA - sC) < 60) {        // degenerate snap — use the plan geometry
-    ch = railOffsetPt(-85, 55); al = railOffsetPt(52, 26);
-    sC = -85; sA = 52;
-  }
-  try {
-    contextGroup.add(newRoad([
-      ch,
-      railOffsetPt(sC + (sA - sC) * 0.35, eOff),
-      railOffsetPt(sC + (sA - sC) * 0.65, eOff),
-      al,
-    ]));
-  } catch (e) {}
+   A single shared registration transform (PLAN_REG) maps that image space to
+   real metres east/north of the level crossing, and then — through the model's
+   own OSM-derived geo pipeline — into the scene. The SAME transform positions
+   the concept-plan overlay decal, so once you register the overlay onto the
+   satellite (Site context ▸ Concept plan), the picture AND all of these roads
+   snap into their correct real-world position together.
+   ============================================================================ */
 
-  // New link road: from the Admiral Parade / Playford Alive East connection,
-  // east parallel to Curtis Road, then south under the overpass just west of
-  // the rail, tying into Palina Court
-  const adm = named.admiral || { x: -238, z: -8 };
-  const pal = named.palina || railOffsetPt(-95, -26);
-  try {
-    contextGroup.add(newRoad([
-      adm,
-      { x: -194, z: -52 }, { x: -139, z: -63 }, { x: -73, z: -58 }, { x: -34, z: -45 },
-      railOffsetPt(15, wOff), railOffsetPt(-20, wOff),
-      pal,
-    ]));
-  } catch (e) {}
+// image-1 registration: normalised (u,v) → metres (east, north) from the crossing.
+// EDIT THESE (or paste the "Export everything" block) to make the model open pre-registered.
+const PLAN_REG = { u0: 0.589, v0: 0.345, widthM: 1120, rotDeg: -26, offE: 35, offN: -2 };
 
-  ucLinkCrossings = [eOff, wOff];      // undercroft keeps clear of the underpass roads
-  buildUndercroft();
+// The concept overpass centreline as normalised [u,v] points (west → east). When
+// set, it overrides the OSM Curtis Rd centreline so the whole bridge follows the
+// concept alignment on load. null = use the OSM centreline. Set via the "Set as
+// Curtis Rd centreline" button, then paste the exported value here to persist.
+const PLAN_CENTRELINE = [ [0.1425, 0.3864], [0.2140, 0.3778], [0.2739, 0.3631], [0.3328, 0.3496], [0.3881, 0.3385], [0.4458, 0.3322], [0.5030, 0.3290], [0.5676, 0.3296], [0.6311, 0.3346], [0.6768, 0.3414], [0.7474, 0.3547], [0.8000, 0.3661], [0.8474, 0.3728], [0.9060, 0.3784], [0.9560, 0.3823] ];
+let planCentreline = PLAN_CENTRELINE;   // runtime copy (edited by the tool)
+let osmRoadPath = null;                 // remembers the OSM spine so the override can be reset
+
+// plan-local metres (east, north of crossing) → geo-local frame (satellite/OSM frame)
+function planMetresToGeoLocal(e, n) {
+  const dLat = n / 111320;
+  const dLon = e / (111320 * Math.cos(site.lat * DEG));
+  return lonLatToLocal(site.lon + dLon, site.lat + dLat);
 }
+// plan-local metres → model frame (rides the real alignment like every other element)
+function planMetresToModel(e, n) {
+  const g = planMetresToGeoLocal(e, n);
+  return geoToModel(g.x, g.z);
+}
+// normalised image (u,v) → metres (east, north), through the registration
+function planUVToMetres(u, v) {
+  const R = PLAN_REG;
+  const E = (u - R.u0) * R.widthM, N = -(v - R.v0) * R.widthM;
+  const c = Math.cos(R.rotDeg * DEG), s = Math.sin(R.rotDeg * DEG);
+  return { e: E * c - N * s + R.offE, n: E * s + N * c + R.offN };
+}
+// normalised image (u,v) → model coordinates
+function planUVToModel(u, v) {
+  const m = planUVToMetres(u, v);
+  return planMetresToModel(m.e, m.n);
+}
+const uv = a => planUVToModel(a[0], a[1]);   // shorthand for the trace tables
+
+/* ---- the trace (first pass; refine any line with the click-digitiser) -------
+   type: 'road' kerbed civil carriageway · 'sup' shared-use path · 'landscape'
+   filled urban-realm polygon. Coordinates read off image 1 by eye — the
+   registration transform above corrects global position/scale/rotation; the
+   digitiser corrects the per-line shape. */
+let PLAN_FEATURES = [
+  { type: 'road', name: "road", pts: [ [0.4877, 0.4600], [0.4882, 0.3984], [0.4884, 0.3124], [0.4831, 0.2920], [0.4699, 0.2761], [0.4473, 0.2680], [0.4211, 0.2704], [0.3424, 0.2794] ] },
+  { type: 'road', name: "road", pts: [ [0.3375, 0.3401], [0.3340, 0.2944], [0.3297, 0.2676], [0.3131, 0.2336] ] },
+  { type: 'road', name: "road", pts: [ [0.6181, 0.4421], [0.6196, 0.4067], [0.6106, 0.3793], [0.5994, 0.3425], [0.5988, 0.2874], [0.5992, 0.1285] ] },
+  { type: 'road', name: "road", pts: [ [0.6197, 0.4067], [0.6767, 0.4105], [0.7668, 0.4130], [0.8167, 0.4054], [0.8269, 0.3879], [0.8290, 0.3770] ] },
+  { type: 'sup', name: "sup", pts: [ [0.5278, 0.6132], [0.5388, 0.5328], [0.5451, 0.4386], [0.5458, 0.4213], [0.4965, 0.4174], [0.4946, 0.3500], [0.4947, 0.3038], [0.4876, 0.2858], [0.4730, 0.2704], [0.4526, 0.2625], [0.4380, 0.2610], [0.3512, 0.2715], [0.3424, 0.2697], [0.3380, 0.2637], [0.3217, 0.2294] ] },
+  { type: 'sup', name: "sup", pts: [ [0.2241, 0.3892], [0.2345, 0.3862], [0.2442, 0.3841], [0.2519, 0.3880], [0.2585, 0.3916], [0.2726, 0.3936], [0.2812, 0.3919], [0.2923, 0.3868], [0.3129, 0.3745], [0.3313, 0.3632], [0.3413, 0.3586] ] },
+  { type: 'sup', name: "sup", pts: [ [0.3006, 0.3814], [0.3045, 0.3871], [0.3093, 0.3875], [0.3183, 0.3821], [0.3396, 0.3712], [0.3553, 0.3645], [0.3884, 0.3591], [0.4256, 0.3545], [0.4583, 0.3519], [0.4942, 0.3515] ] },
+  { type: 'sup', name: "sup", pts: [ [0.1479, 0.3633], [0.1631, 0.3677], [0.1729, 0.3696], [0.1818, 0.3679], [0.1909, 0.3652], [0.2022, 0.3622], [0.2115, 0.3625], [0.2260, 0.3616], [0.2482, 0.3601], [0.2743, 0.3537], [0.2856, 0.3511], [0.2965, 0.3449], [0.3101, 0.3388], [0.3218, 0.3345], [0.3328, 0.3350], [0.3518, 0.3282], [0.3653, 0.3251], [0.3834, 0.3190], [0.3989, 0.3202], [0.4107, 0.3207], [0.4221, 0.3237] ] },
+  { type: 'sup', name: "sup", pts: [ [0.4138, 0.3220], [0.4148, 0.3118], [0.4167, 0.3091], [0.4325, 0.3082], [0.4558, 0.3068], [0.5108, 0.3027], [0.5443, 0.3034], [0.5488, 0.3004], [0.5497, 0.2925], [0.5491, 0.2798] ] },
+  { type: 'sup', name: "sup", pts: [ [0.6126, 0.4224], [0.6094, 0.3997], [0.6080, 0.3926], [0.6026, 0.3793], [0.5973, 0.3611], [0.5912, 0.3432], [0.5907, 0.3114], [0.5914, 0.3070], [0.6063, 0.3095], [0.6517, 0.3086], [0.6738, 0.3093], [0.6861, 0.3123], [0.6973, 0.3197], [0.7126, 0.3257], [0.7259, 0.3296], [0.7393, 0.3333], [0.7545, 0.3348], [0.7809, 0.3345], [0.7978, 0.3361], [0.8071, 0.3367], [0.8097, 0.3416], [0.8105, 0.3483] ] },
+  { type: 'sup', name: "sup", pts: [ [0.8758, 0.3546], [0.8602, 0.3520], [0.8378, 0.3478], [0.8265, 0.3478], [0.7988, 0.3462], [0.7540, 0.3438], [0.7448, 0.3444] ] },
+  { type: 'sup', name: "sup", pts: [ [0.7194, 0.3590], [0.7281, 0.3648], [0.7422, 0.3700], [0.7564, 0.3730], [0.7730, 0.3794], [0.7905, 0.3840], [0.8110, 0.3861], [0.8282, 0.3901], [0.8376, 0.3942], [0.8410, 0.3994], [0.8438, 0.4046], [0.8532, 0.4093], [0.8673, 0.4089], [0.8910, 0.4084], [0.9265, 0.4085] ] },
+  { type: 'sup', name: "sup", pts: [ [0.7952, 0.3867], [0.7906, 0.3936], [0.7798, 0.4015], [0.7712, 0.4047], [0.7575, 0.4034], [0.7393, 0.4020], [0.7133, 0.4013], [0.6767, 0.4023], [0.6430, 0.4002], [0.6319, 0.3975], [0.6280, 0.3970], [0.6206, 0.3860], [0.6186, 0.3750], [0.6082, 0.3407], [0.6054, 0.3178], [0.6066, 0.3105] ] },
+  { type: 'sup', name: "sup", pts: [ [0.3504, 0.3294], [0.3478, 0.3208], [0.3455, 0.3016], [0.3446, 0.2907] ] },
+  { type: 'sup', name: "sup", pts: [ [0.3256, 0.3334], [0.3260, 0.3253], [0.3236, 0.3009], [0.3226, 0.2860], [0.3195, 0.2708], [0.3153, 0.2606], [0.3057, 0.2386] ] },
+  { type: 'landscape', name: "landscape", pts: [ [0.6146, 0.3474], [0.6437, 0.3514], [0.6670, 0.3541], [0.6902, 0.3596], [0.7225, 0.3644], [0.7447, 0.3701], [0.7702, 0.3801], [0.7892, 0.3854], [0.7806, 0.3931], [0.7670, 0.4003], [0.7518, 0.4001], [0.6604, 0.3987], [0.6390, 0.3961], [0.6239, 0.3805], [0.6204, 0.3715], [0.6155, 0.3569] ] },
+  { type: 'landscape', name: "landscape", pts: [ [0.6086, 0.3204], [0.6095, 0.3129], [0.6259, 0.3114], [0.6445, 0.3118], [0.6677, 0.3132], [0.6807, 0.3155], [0.6947, 0.3210], [0.7127, 0.3286], [0.7336, 0.3340], [0.7489, 0.3373], [0.7772, 0.3367], [0.7952, 0.3389], [0.8008, 0.3424], [0.7842, 0.3427], [0.7643, 0.3409], [0.7413, 0.3404], [0.7162, 0.3361], [0.6894, 0.3287], [0.6471, 0.3244], [0.6192, 0.3215] ] },
+];
+
+// a filled landscaping / urban-realm polygon on the ground (model-space pts)
+function landscapePoly(mpts) {
+  const shape = new THREE.Shape();
+  shape.moveTo(mpts[0].x, mpts[0].z);
+  for (let i = 1; i < mpts.length; i++) shape.lineTo(mpts[i].x, mpts[i].z);
+  const geo = new THREE.ShapeGeometry(shape);
+  geo.rotateX(Math.PI / 2);                 // XY shape (x, z-as-y) → ground plane
+  const m = new THREE.Mesh(geo, MAT.embankment);
+  m.position.y = 0.045; m.receiveShadow = true;
+  return m;
+}
+// a shared-use path ribbon (model-space pts)
+function buildSUP(mpts) {
+  const p = makePath(mpts);
+  return pathRibbon(p, p.sMin + 0.5, p.sMax - 0.5, 3.0, 0, () => 0.16, MAT.path, 5);
+}
+
+// Build the whole plan-accurate at-grade network. Replaces the old two
+// hand-guessed connectors; kept behind the buildConnectors() name so the
+// existing OSM-load callers keep working (the plan is now the source of truth,
+// so the OSM `named` ends are no longer needed).
+function buildPlan() {
+  disposeGroup(contextGroup);
+  // 1) traced new civil roads / paths / landscaping from the concept plan
+  for (const f of PLAN_FEATURES) {
+    try {
+      const mpts = f.pts.map(uv);
+      if (f.type === 'road')            contextGroup.add(buildCivilRoad(mpts));
+      else if (f.type === 'sup')        contextGroup.add(buildSUP(mpts));
+      else if (f.type === 'landscape')  contextGroup.add(landscapePoly(mpts));
+    } catch (e) {}
+  }
+  // Shared-use paths are no longer auto-generated — draw them all as 'sup'
+  // features with the trace tool so their placement matches the concept plan.
+  ucLinkCrossings = [18, -18];          // undercroft keeps clear of the under-overpass roads
+  buildUndercroft();
+  if (planOverlay) positionPlanOverlay();   // keep the decal locked to the roads
+}
+
+// preserved entry point (OSM street load + initial build both call this)
+function buildConnectors(_named) { buildPlan(); }
 
 function streetWidth(tags) {
   const h = tags.highway || '';
@@ -1812,10 +2245,10 @@ async function loadStreets(atLat, atLon) {
       streetsGroup.add(sp);
     }
     streetsGroup.visible = params.showStreets;
-    try { buildConnectors(named); } catch (e) {}
+    // roads are already built in alignSite the moment the alignment is known —
+    // no need to rebuild them here (that caused the ~15 s late snap)
     streetsStatus = `${count} OSM streets, ${labelBest.size} labels`;
   } catch (e) {
-    try { buildConnectors(null); } catch (e2) {}
     streetsStatus = 'unavailable (' + (e.message || 'offline') + ')';
   }
   updateStats();
@@ -2220,15 +2653,24 @@ buildTrain();
 
 const $ = id => document.getElementById(id);
 
+// keep spanCount = spansLeft + rail span + spansRight, and backfill lengths
+function syncSpanCount() {
+  params.spanCount = params.spansLeft + 1 + params.spansRight;
+  for (let i = 0; i < params.spanCount; i++)
+    if (params.spanLengths[i] === undefined) params.spanLengths[i] = 32;
+}
+
 function renderSpanList() {
   const wrap = $('spanList');
   wrap.innerHTML = '';
+  const railIdx = params.spansLeft;      // index of the span that crosses the rail
   for (let i = 0; i < params.spanCount; i++) {
     if (params.spanLengths[i] === undefined) params.spanLengths[i] = 32;
     const row = document.createElement('div');
     row.className = 'row';
     const maxLen = params.structure === 'arch' ? 130 : 90;
-    row.innerHTML = `<label>Span ${i + 1}</label>
+    const label = i < railIdx ? `Left ${railIdx - i}` : i === railIdx ? 'Rail span' : `Right ${i - railIdx}`;
+    row.innerHTML = `<label>${label}</label>
       <input type="range" min="18" max="${maxLen}" step="1" value="${Math.min(params.spanLengths[i], maxLen)}">
       <span class="val">${Math.min(params.spanLengths[i], maxLen)} m</span>`;
     const slider = row.querySelector('input'), val = row.querySelector('.val');
@@ -2240,6 +2682,7 @@ function renderSpanList() {
     });
     wrap.appendChild(row);
   }
+  enhanceSliders(wrap);   // give the per-span sliders editable value boxes too
 }
 
 function setTypeButtons() {
@@ -2250,20 +2693,32 @@ document.querySelectorAll('#typeBtns button').forEach(b => b.addEventListener('c
   params.structure = b.dataset.type;
   if (params.structure === 'arch' && params.spanCount === 3 &&
       params.spanLengths.slice(0, 3).join() === '30,36,30') {
-    params.spanLengths[1] = 64;        // a longer centre arch over the rail reads best
+    params.spanLengths[params.spansLeft] = 64;   // a longer arch over the rail reads best
   }
   setTypeButtons(); renderSpanList(); buildBridge();
 }));
 
-$('spanCount').addEventListener('input', e => {
-  params.spanCount = +e.target.value;
-  $('spanCountVal').textContent = e.target.value;
-  renderSpanList(); buildBridge();
+function onSpanSideChange() { syncSpanCount(); renderSpanList(); buildBridge(); updateStats(); }
+$('spansLeft').addEventListener('input', e => {
+  params.spansLeft = +e.target.value; $('spansLeftVal').textContent = e.target.value; onSpanSideChange();
+});
+$('spansRight').addEventListener('input', e => {
+  params.spansRight = +e.target.value; $('spansRightVal').textContent = e.target.value; onSpanSideChange();
 });
 $('clearance').addEventListener('input', e => {
   params.clearance = +e.target.value;
   $('clearanceVal').textContent = (+e.target.value).toFixed(1) + ' m';
   buildBridge();
+});
+$('rampGrade').addEventListener('input', e => {
+  params.rampGrade = +e.target.value;
+  $('rampGradeVal').textContent = (+e.target.value).toFixed(1) + ' %';
+  buildBridge(); updateStats();
+});
+$('crestLen').addEventListener('input', e => {
+  params.crestLen = +e.target.value;
+  $('crestLenVal').textContent = Math.round(+e.target.value) + ' m';
+  buildBridge(); updateStats();
 });
 $('lanes').addEventListener('change', e => { params.lanesPerDir = +e.target.value; buildBridge(); buildCars(); });
 $('approach').addEventListener('change', e => { params.approach = e.target.value; buildBridge(); });
@@ -2317,6 +2772,50 @@ $('noiseLevel').addEventListener('input', e => {
 $('geoX').addEventListener('input', e => { params.geoX = +e.target.value; $('geoXVal').textContent = e.target.value + ' m'; applyGeoOffset(); });
 $('geoZ').addEventListener('input', e => { params.geoZ = +e.target.value; $('geoZVal').textContent = e.target.value + ' m'; applyGeoOffset(); });
 
+/* ---- concept-plan overlay + registration + digitiser ---- */
+$('showPlan').addEventListener('change', e => {
+  params.showPlan = e.target.checked;
+  if (params.showPlan) rebuildPlanOverlay();
+  if (planOverlay) planOverlay.visible = params.showPlan;
+});
+$('planOpacity').addEventListener('input', e => {
+  params.planOpacity = +e.target.value; $('planOpacityVal').textContent = params.planOpacity.toFixed(2);
+  if (planOverlay) planOverlay.material.opacity = params.planOpacity;
+});
+// registration sliders reposition BOTH the overlay decal and the traced roads
+function reRegisterPlan() { positionPlanOverlay(); buildPlan(); }
+$('planE').addEventListener('input', e => { PLAN_REG.offE = +e.target.value; $('planEVal').textContent = e.target.value + ' m'; reRegisterPlan(); });
+$('planN').addEventListener('input', e => { PLAN_REG.offN = +e.target.value; $('planNVal').textContent = e.target.value + ' m'; reRegisterPlan(); });
+$('planScale').addEventListener('input', e => { PLAN_REG.widthM = +e.target.value; $('planScaleVal').textContent = e.target.value + ' m'; reRegisterPlan(); });
+$('planRot').addEventListener('input', e => { PLAN_REG.rotDeg = +e.target.value; $('planRotVal').textContent = (+e.target.value).toFixed(1) + '°'; reRegisterPlan(); });
+$('planTrace').addEventListener('change', e => {
+  digitiser.on = e.target.checked;
+  $('planStatus').textContent = digitiser.on ? 'trace mode ON — click along a line' : '';
+});
+$('planCopy').addEventListener('click', digitiserCopy);
+$('planClear').addEventListener('click', digitiserClear);
+$('planUndo').addEventListener('click', digitiserUndo);
+$('planBuild').addEventListener('click', buildUserFeature);
+$('planExport').addEventListener('click', exportPlan);
+$('planSetCentre').addEventListener('click', () => {
+  if (digitiser.uv.length < 2) { setPlanMsg('trace the overpass centreline first (≥2 points)'); return; }
+  planCentreline = digitiser.uv.map(p => p.slice());
+  const mpts = planCentreline.map(uv);
+  const ok = applyCurtisCentreline(mpts);
+  if (ok) { renderFeatList(); digitiserClear(); setPlanMsg(`bridge realigned to ${mpts.length}-point concept centreline`); }
+  else { planCentreline = null; setPlanMsg('could not apply — need ≥2 points'); }
+});
+renderFeatList();
+// click-to-digitise, guarded so orbit drags don't drop points
+(() => {
+  let downX = 0, downY = 0;
+  const el = renderer.domElement;
+  el.addEventListener('pointerdown', e => { downX = e.clientX; downY = e.clientY; });
+  el.addEventListener('pointerup', e => {
+    if (digitiser.on && Math.hypot(e.clientX - downX, e.clientY - downY) < 5) digitiserClick(e);
+  });
+})();
+
 const typeNames = { 'super-t': 'Precast concrete Super-T girders', 'steel': 'Steel plate girders, composite deck', 'arch': 'Steel network arch (through type)' };
 
 /* approach earthworks quantities, integrated along the actual ramp profiles:
@@ -2330,7 +2829,8 @@ function computeQuantities() {
   let wallArea = 0, fill = 0;
   for (const side of [-1, 1]) {
     const sStart = side < 0 ? derived.x0 : derived.x1;
-    for (let i = 0; i < derived.rampLen + 5; i += step) {
+    const L = Math.max(0, side < 0 ? derived.x0 + derived.toe : derived.toe - derived.x1);
+    for (let i = 0; i < L + 5; i += step) {
       const h = Math.max(0, roadY(sStart + side * (i + step / 2)) - 0.05);
       if (h <= 0.02) continue;
       wallArea += 2 * h * step;
@@ -2353,7 +2853,12 @@ function updateStats() {
     `<b>${label}</b> — ${params.spanCount} span${params.spanCount > 1 ? 's' : ''}, ` +
     `${params.spanLengths.slice(0, params.spanCount).map(v => v + ' m').join(' + ')}<br>` +
     `Bridge length <b>${derived.totalLen} m</b> · deck level <b>${derived.deckTopY.toFixed(1)} m</b> above rail · ` +
-    `approach ramps <b>${Math.round(derived.rampLen)} m</b> each at 5 %<br>` +
+    (() => {
+      const wL = Math.max(0, derived.x0 + derived.toe), eL = Math.max(0, derived.toe - derived.x1);
+      const crest = derived.crestHalf * 2 < derived.totalLen
+        ? ` · flat crest <b>${Math.round(derived.crestHalf * 2)} m</b> (grade starts on the spans)` : '';
+      return `approach ramps <b>${Math.round(wL)} m</b> W / <b>${Math.round(eL)} m</b> E at <b>${params.rampGrade}%</b>${crest}<br>`;
+    })() +
     `Deck width <b>${derived.deckWidth.toFixed(1)} m</b> (${params.lanesPerDir} lane${params.lanesPerDir > 1 ? 's' : ''}/dir + 3.0 m shared-use paths both sides)<br>` +
     (() => {
       const qty = computeQuantities();
@@ -2382,6 +2887,7 @@ document.querySelectorAll('#viewBtns button').forEach(b => b.addEventListener('c
 
 /* ---------------- boot + loop ---------------- */
 
+syncSpanCount();
 renderSpanList();
 setTypeButtons();
 updateSun();
@@ -2390,7 +2896,28 @@ buildBridge();
 buildConnectors(null);
 buildCars();
 alignSite();
-document.getElementById('loading').remove();
+// reflect the baked-in registration on the concept-plan sliders before they get
+// editable number boxes, so they show the real values and don't reset it if nudged
+(function syncPlanRegUI() {
+  const set = (id, val, text) => { const el = $(id); if (el) el.value = val; const v = $(id + 'Val'); if (v) v.textContent = text; };
+  set('planE', PLAN_REG.offE, PLAN_REG.offE + ' m');
+  set('planN', PLAN_REG.offN, PLAN_REG.offN + ' m');
+  set('planScale', PLAN_REG.widthM, PLAN_REG.widthM + ' m');
+  set('planRot', PLAN_REG.rotDeg, PLAN_REG.rotDeg.toFixed(1) + '°');
+})();
+enhanceSliders(document);   // editable value boxes on every slider in the panel
+
+// hold the loading screen until the model is aligned AND the central satellite
+// tiles have loaded — with a hard timeout so it can never get stuck
+function hideLoading() {
+  const el = document.getElementById('loading');
+  if (!el || el.dataset.hidden) return;
+  el.dataset.hidden = '1';
+  el.style.opacity = '0';
+  setTimeout(() => el.remove(), 650);
+}
+const bootTimeout = new Promise(r => setTimeout(r, 15000));
+Promise.race([Promise.all([alignReady, firstSat]), bootTimeout]).then(hideLoading);
 
 /* collapsible control panel (handy on mobile) */
 const panelEl = document.getElementById('panel');
