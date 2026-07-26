@@ -149,9 +149,9 @@
         <button data-type="arch">Network<br>arch</button>
       </div>
       <div class="row"><label>Spans left of rail</label>
-        <input type="range" id="spansLeft" min="0" max="4" step="1" value="1"><span class="val" id="spansLeftVal">1</span></div>
+        <input type="range" id="spansLeft" min="0" max="4" step="1" value="3"><span class="val" id="spansLeftVal">3</span></div>
       <div class="row"><label>Spans right of rail</label>
-        <input type="range" id="spansRight" min="0" max="4" step="1" value="1"><span class="val" id="spansRightVal">1</span></div>
+        <input type="range" id="spansRight" min="0" max="4" step="1" value="2"><span class="val" id="spansRightVal">2</span></div>
       <div id="spanList"></div>
       <div class="row"><label>Lanes per direction</label>
         <select id="lanes"><option value="1" selected>1 (dual-lane)</option><option value="2">2</option></select></div>
@@ -326,10 +326,10 @@ const CONFIG = {
 
 const params = {
   structure: 'super-t',         // 'super-t' | 'steel' | 'arch'
-  spanCount: 3,                 // = spansLeft + 1 (rail span) + spansRight (kept in sync)
-  spansLeft: 1,                 // approach spans left of the rail
-  spansRight: 1,                // approach spans right of the rail
-  spanLengths: [30, 36, 30],
+  spanCount: 6,                 // = spansLeft + 1 (rail span) + spansRight (kept in sync)
+  spansLeft: 3,                 // approach spans left of the rail
+  spansRight: 2,                // approach spans right of the rail
+  spanLengths: [28, 30, 32, 66, 32, 28],   // index spansLeft (3) is the rail span (clears the skewed corridor)
   lanesPerDir: 1,
   clearance: 6.8,
   rampGrade: 5,                 // approach ramp grade (%) — vertical rise / run
